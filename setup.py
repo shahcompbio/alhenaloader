@@ -24,9 +24,9 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 # Get the base version from the library.  (We'll find it in the `version.py`
 # file in the src directory, but we'll bypass actually loading up the library.)
 vspec = importlib.util.spec_from_file_location(
-  "version",
-  str(Path(__file__).resolve().parent /
-      'alhenaloader'/"version.py")
+    "version",
+    str(Path(__file__).resolve().parent /
+        'alhenaloader'/"version.py")
 )
 vmod = importlib.util.module_from_spec(vspec)
 vspec.loader.exec_module(vmod)
@@ -49,7 +49,9 @@ setup(
     version=version,
     install_requires=[
         # Include dependencies here
-        'click>=7.0,<8'
+        'click>=7.0,<8',
+        'elasticsearch>=7.0.0,<8.0.0',
+        'numpy'
     ],
     entry_points="""
     [console_scripts]
@@ -60,9 +62,9 @@ setup(
     author='Samantha Leung',
     author_email='leungs1@mskcc.org',
     # Use the URL to the github repo.
-    url= 'https://github.com/redpanda-cat/alhenaloader',
+    url='https://github.com/shahcompbio/alhenaloader',
     download_url=(
-        f'https://github.com/redpanda-cat/'
+        f'https://github.com/shahcompbio/'
         f'alhenaloader/archive/{version}.tar.gz'
     ),
     keywords=[

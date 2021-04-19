@@ -46,10 +46,13 @@ pass_info = click.make_pass_decorator(Info, ensure=True)
 
 # Change the options to below to suit the actual options for your task (or
 # tasks).
-@click.group()
+@click.group(chain=True)
 @click.option("--verbose", "-v", count=True, help="Enable verbose output.")
+@click.option('--host', default='localhost', help='Hostname for Elasticsearch server')
+@click.option('--port', default=9200, help='Port for Elasticsearch server')
+@click.option('--id', help="ID of analysis", required=True)
 @pass_info
-def cli(info: Info, verbose: int):
+def cli(info: Info, verbose: int, host: str, port: int, id: str):
     """Run alhenaloader."""
     # Use the verbosity count to determine the logging level...
     if verbose > 0:
@@ -66,13 +69,57 @@ def cli(info: Info, verbose: int):
             )
         )
     info.verbose = verbose
+    info.id = id
+    info.host = host
+    info.port = port
 
 
 @cli.command()
 @pass_info
-def hello(_: Info):
-    """Say 'hello' to the nice people."""
-    click.echo("alhenaloader says 'hello'")
+def clean(info: Info):
+    """Delete indices/records associated with dashboard ID"""
+    click.echo(f"Cleaning {info.id}")
+
+
+@cli.command()
+@pass_info
+def load(info: Info):
+    """
+    Load records under new indices named after dashboard ID
+
+    Data is contained either in one file directory (--qc) or 
+    split amongst three separate ones (--hmmcopy, --alignment, --annotation)
+
+    """
+    click.echo(f"Loading {info.id}")
+
+
+@cli.command()
+@pass_info
+def add_view(info: Info):
+    """Add new view with name"""
+    click.echo("Add view")
+
+
+@cli.command()
+@pass_info
+def add_dashboard_to_view(info: Info):
+    """Add dashboard ID to view"""
+    click.echo("Add dashboard to a view")
+
+
+@cli.command()
+@pass_info
+def list_views(info: Info):
+    """List all views"""
+    click.echo("List all views")
+
+
+@cli.command()
+@pass_info
+def initialize(info: Info):
+    """Initalize database"""
+    click.echo("Initialize database")
 
 
 @cli.command()

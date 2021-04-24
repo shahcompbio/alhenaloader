@@ -19,7 +19,12 @@ It can be used as a handy facility for running the task from a command line.
 .. moduleauthor:: Samantha Leung <leungs1@mskcc.org>
 """
 import logging
+from typing import List
 import click
+from scgenome.loaders.qc import load_qc_data
+
+from alhenaloader.api import ES
+import alhenaloader.load
 from .__init__ import __version__
 
 LOGGING_LEVELS = {
@@ -50,7 +55,7 @@ pass_info = click.make_pass_decorator(Info, ensure=True)
 @click.option("--verbose", "-v", count=True, help="Enable verbose output.")
 @click.option('--host', default='localhost', help='Hostname for Elasticsearch server')
 @click.option('--port', default=9200, help='Port for Elasticsearch server')
-@click.option('--id', help="ID of analysis", required=True)
+@click.option('--id', help="ID of dashboard")
 @pass_info
 def cli(info: Info, verbose: int, host: str, port: int, id: str):
     """Run alhenaloader."""
@@ -69,57 +74,107 @@ def cli(info: Info, verbose: int, host: str, port: int, id: str):
             )
         )
     info.verbose = verbose
+    info.es = ES(host, port)
     info.id = id
-    info.host = host
-    info.port = port
 
 
 @cli.command()
 @pass_info
 def clean(info: Info):
     """Delete indices/records associated with dashboard ID"""
-    click.echo(f"Cleaning {info.id}")
+    assert info.id is not None, "Please specify a dashboard ID"
+
+    alhenaloader.load.clean_data(info.id, info.es)
+
+    info.es.delete_records_by_dashboard_id(
+        info.es.DASHBOARD_ENTRY_INDEX, info.id)
+
+    info.es.remove_dashboard_from_views(info.id)
 
 
 @cli.command()
+@click.option('--qc', help='Directory with qc results')
+@click.option('--alignment', help='Directory with alignment results')
+@click.option('--hmmcopy', help='Directory with hmmcopy results')
+@click.option('--annotation', help='Directory with annotation results')
+@click.option('--view', '-v', 'views', multiple=True, default=["DLP"], help="Views to load dashboard into")
+@click.option('--library', required=True, help='Library ID of dashboard')
+@click.option('--sample', required=True, help='Sample ID of dashboard')
+@click.option('--description', required=True, help='Description of dashboard')
+@click.option('--metadata', 'metadata', multiple=True, help='Additional metadata')
 @pass_info
-def load(info: Info):
+def load(info: Info, qc: str, alignment: str, hmmcopy: str, annotation: str, views: List[str], library: str, sample: str, description: str, metadata: List[str]):
     """
     Load records under new indices named after dashboard ID
 
     Data is contained either in one file directory (--qc) or 
-    split amongst three separate ones (--hmmcopy, --alignment, --annotation)
+    split amongst three separate ones (--alignment, --hmmcopy, --annotation)
 
     """
-    click.echo(f"Loading {info.id}")
+    assert info.id is not None, "Please specify a dashboard ID"
+
+    is_all_dir = alignment is not None and hmmcopy is not None and annotation is not None
+    assert qc is not None or is_all_dir, "Please provide a qc directory or all of annotation, hmmcopy, and alignment directories"
+
+    if qc is not None:
+        data = load_qc_data(qc)
+    else:
+        data = alhenaloader.load.load_qc_from_dirs(
+            alignment, hmmcopy, annotation)
+
+    alhenaloader.load.load_data(data, info.id, info.es)
+
+    processed_metadata = {}
+    for meta_str in metadata:
+        [key, value] = meta_str.split(":")
+        processed_metadata[key] = value
+    alhenaloader.load.load_dashboard_entry(
+        info.id, library, sample, description, processed_metadata, info.es)
+
+    info.es.add_dashboard_to_views(info.id, list(views))
 
 
 @cli.command()
+@click.argument('view')
+@click.option('--dashboard', '-d', 'dashboards', multiple=True, help="List of dashboards names")
 @pass_info
-def add_view(info: Info):
+def add_view(info: Info, view: str, dashboards: List[str]):
     """Add new view with name"""
-    click.echo("Add view")
+    info.es.add_view(view, dashboards=list(dashboards))
 
 
 @cli.command()
+@click.argument('view')
+@click.option('--dashboard', '-d', 'dashboards', multiple=True, help="List of dashboards names")
 @pass_info
-def add_dashboard_to_view(info: Info):
-    """Add dashboard ID to view"""
-    click.echo("Add dashboard to a view")
+def add_dashboard_to_view(info: Info, view: str, dashboards: List[str]):
+    """Add given dashboard IDs to view"""
+    info.es.add_dashboards_to_view(view, list(dashboards))
+
+
+@cli.command()
+@click.argument('view')
+@pass_info
+def remove_view(info: Info, view):
+    """Remove view"""
+    info.es.remove_view(view)
 
 
 @cli.command()
 @pass_info
 def list_views(info: Info):
     """List all views"""
-    click.echo("List all views")
+    views = info.es.get_views()
+    for view in views:
+        click.echo(view)
 
 
 @cli.command()
 @pass_info
 def initialize(info: Info):
     """Initalize database"""
-    click.echo("Initialize database")
+    info.es.create_index(info.es.DASHBOARD_ENTRY_INDEX)
+    info.es.add_view("DLP")
 
 
 @cli.command()

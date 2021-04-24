@@ -1,15 +1,14 @@
-import urllib3
 from elasticsearch import Elasticsearch
 from elasticsearch import helpers
 from elasticsearch.exceptions import NotFoundError
+import ssl
+from elasticsearch.connection import create_ssl_context
 import os
-
 import numpy as np
 
 import logging
 logger = logging.getLogger('alhena_loading')
 
-urllib3.disable_warnings()
 
 DEFAULT_MAPPING = {
     "settings": {
@@ -32,54 +31,36 @@ DEFAULT_MAPPING = {
     }
 }
 
-DASHBOARD_ENTRY_INDEX = "analyses"
-
 
 class ES(object):
     """Alhena Elasticsearch connection"""
+
+    DASHBOARD_ENTRY_INDEX = "analyses"
 
     def __init__(self, host, port):
         """Create a new instance."""
         assert os.environ['ALHENA_ES_USER'] is not None and os.environ[
             'ALHENA_ES_PASSWORD'] is not None, 'Elasticsearch credentials missing'
 
+        ssl_context = create_ssl_context()
+        ssl_context.check_hostname = False
+        ssl_context.verify_mode = ssl.CERT_NONE
+
         es = Elasticsearch(hosts=[{'host': host, 'port': port}],
                            http_auth=(os.environ['ALHENA_ES_USER'],
                                       os.environ['ALHENA_ES_PASSWORD']),
                            scheme='https',
                            timeout=300,
-                           verify_certs=False)
+                           ssl_context=ssl_context)
 
         self.es = es
-
-    def initialize_db(self):
-        """Initialize Elasticsearch database with first indices"""
-        es = self.es
-
-        logger.info('INITIALIZING ELASTICSEARCH')
-
-        logger.info('Creating analyses')
-        es.indices.create(index=DASHBOARD_ENTRY_INDEX,
-                          body=DEFAULT_MAPPING)
-
-        logger.info('Creating default DLP dashboard')
-        es.security.put_role(name="DLP_dashboardReader", body={
-            'indices': [{
-                'names': [DASHBOARD_ENTRY_INDEX],
-                'privileges': ["read"]
-            }]
-        }
-        )
 
         # Generic load/delete
 
         def load_record(self, record, record_id, index, mapping=None):
             """Load individual record"""
             if not self.es.indices.exists(index):
-                logger.info('No index found - creating index named %s', index)
-                if mapping is None:
-                    mapping = DEFAULT_MAPPING
-                es.indices.create(index=index, body=mapping)
+                self.create_index(index, mapping=mapping)
 
             logger.info('Loading record')
             self.es.index(index=index, id=record_id, body=record)
@@ -110,23 +91,23 @@ class ES(object):
 
         def load_records(self, records, index, mapping=None):
             """Load batch of records"""
-
             if not self.es.indices.exists(index):
-                logger.info(
-                    'No index found - creating index named  %s', index)
-
-                if mapping is None:
-                    mapping = DEFAULT_MAPPING
-                self.es.indices.create(
-                    index=index,
-                    body=mapping
-                )
+                self.create_index(index, mapping=mapping)
 
             for success, info in helpers.parallel_bulk(self.es, records, index=index):
                 if not success:
                     #   logging.error(info)
                     logger.info(info)
                     logger.info('Doc failed in parallel loading')
+
+        def create_index(self, index_name, mapping=None):
+            logger.info('Creating index with name %s', index_name)
+
+            if mapping is None:
+                mapping = DEFAULT_MAPPING
+
+            self.es.indices.create(index=index_name,
+                                   body=mapping)
 
         def delete_index(self, index):
             if self.es.indices.exists(index):
@@ -137,25 +118,18 @@ class ES(object):
                 query = get_query_by_dashboard_id(dashboard_id)
                 self.es.delete_by_query(index=index, body=query, refresh=True)
 
-        # Analyses
-
-        def load_dashboard_record(self, record, dashboard_id):
-            """Load individual dashboard record"""
-            logger.info("Creating analysis object")
-            self.load_record(record, dashboard_id,
-                             DASHBOARD_ENTRY_INDEX)
-
-        def delete_daashboard_record(self, dashboard_id):
+        def delete_dashboard_record(self, dashboard_id):
             """Delete individual dashboard record"""
             logger.info("Deleting analysis %s", dashboard_id)
             self.delete_records_by_dashboard_id(
-                DASHBOARD_ENTRY_INDEX, dashboard_id)
+                self.DASHBOARD_ENTRY_INDEX, dashboard_id)
 
         def is_loaded(self, dashboard_id):
             """Return true if analysis with dashboard_id exists"""
 
             query = get_query_by_dashboard_id(dashboard_id)
-            count = self.es.count(body=query, index=DASHBOARD_ENTRY_INDEX)
+            count = self.es.count(
+                body=query, index=self.DASHBOARD_ENTRY_INDEX)
 
             return count["count"] == 1
 
@@ -180,6 +154,14 @@ class ES(object):
             except NotFoundError:
                 return False
 
+        def verify_dashboards_loaded(self, dashboards):
+            """Checks that all dashboards are loaded"""
+            unloaded_dashboards = [
+                dashboard for dashboard in dashboards if not self.is_loaded(dashboard)]
+
+            assert len(
+                unloaded_dashboards) == 0, f"Dashboards are not loaded: {unloaded_dashboards}"
+
         def add_view(self, view, dashboards=None):
             """Adds a new view"""
             view_name = f'{view}_dashboardReader'
@@ -190,8 +172,10 @@ class ES(object):
             if dashboards is None:
                 dashboards = []
 
+            self.verify_dashboards_loaded(dashboards)
+
             self.es.security.put_role(name=view_name, body={'indices': [{
-                'names': [DASHBOARD_ENTRY_INDEX] + dashboards,
+                'names': [self.DASHBOARD_ENTRY_INDEX] + dashboards,
                 'privileges': ["read"]
             }]})
 
@@ -202,11 +186,7 @@ class ES(object):
             assert self.is_view_exist(
                 view), f'View with name {view} does not exist'
 
-            unloaded_dashboards = [
-                dashboard for dashboard in dashboards if not self.is_loaded(dashboard)]
-
-            assert len(
-                unloaded_dashboards) == 0, f"Dashboards are not loaded: {unloaded_dashboards}"
+            self.verify_dashboards_loaded(dashboards)
 
             view_name = f'{view}_dashboardReader'
             view_data = self.es.security.get_role(name=view_name)

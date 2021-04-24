@@ -51,7 +51,9 @@ setup(
         # Include dependencies here
         'click>=7.0,<8',
         'elasticsearch>=7.0.0,<8.0.0',
-        'numpy'
+        'numpy',
+        'pandas',
+        "-e git+https://github.com/shahcompbio/scgenome.git#egg=scgenome"
     ],
     entry_points="""
     [console_scripts]

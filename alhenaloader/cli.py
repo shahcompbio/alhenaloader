@@ -86,7 +86,7 @@ def clean(info: Info):
 
     alhenaloader.load.clean_data(info.id, info.es)
 
-    info.es.delete_records_by_dashboard_id(
+    info.es.delete_record_by_id(
         info.es.DASHBOARD_ENTRY_INDEX, info.id)
 
     info.es.remove_dashboard_from_views(info.id)
@@ -104,13 +104,7 @@ def clean(info: Info):
 @click.option('--metadata', 'metadata', multiple=True, help='Additional metadata')
 @pass_info
 def load(info: Info, qc: str, alignment: str, hmmcopy: str, annotation: str, views: List[str], library: str, sample: str, description: str, metadata: List[str]):
-    """
-    Load records under new indices named after dashboard ID
-
-    Data is contained either in one file directory (--qc) or 
-    split amongst three separate ones (--alignment, --hmmcopy, --annotation)
-
-    """
+    """Load records associated with dashboard ID in given directories"""
     assert info.id is not None, "Please specify a dashboard ID"
 
     is_all_dir = alignment is not None and hmmcopy is not None and annotation is not None

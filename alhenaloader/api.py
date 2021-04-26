@@ -7,6 +7,9 @@ import os
 import numpy as np
 
 import logging
+import urllib3
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 logger = logging.getLogger('alhena_loading')
 
 
@@ -57,206 +60,215 @@ class ES(object):
 
         # Generic load/delete
 
-        def load_record(self, record, record_id, index, mapping=None):
-            """Load individual record"""
-            if not self.es.indices.exists(index):
-                self.create_index(index, mapping=mapping)
+    def load_record(self, record, record_id, index, mapping=None):
+        """Load individual recoElrd"""
+        if not self.es.indices.exists(index):
+            self.create_index(index, mapping=mapping)
 
-            logger.info('Loading record')
-            self.es.index(index=index, id=record_id, body=record)
+        logger.info('Loading record')
+        self.es.index(index=index, id=record_id, body=record)
 
-        def load_df(self, df, index_name, batch_size=1e5):
-            """Batch load dataframe"""
-            total_records = df.shape[0]
-            num_records = 0
+    def load_df(self, df, index_name, batch_size=int(1e5)):
+        """Batch load dataframe"""
+        total_records = df.shape[0]
+        num_records = 0
 
-            for batch_start_idx in range(0, df.shape[0], batch_size):
-                batch_end_idx = min(batch_start_idx + batch_size, df.shape[0])
-                batch_data = df.loc[df.index[batch_start_idx:batch_end_idx]]
+        for batch_start_idx in range(0, df.shape[0], batch_size):
+            batch_end_idx = min(batch_start_idx + batch_size, df.shape[0])
+            batch_data = df.loc[df.index[batch_start_idx:batch_end_idx]]
 
-                clean_fields(batch_data)
+            clean_fields(batch_data)
 
-                records = []
-                for record in batch_data.to_dict(orient='records'):
-                    clean_nans(record)
-                    records.append(record)
+            records = []
+            for record in batch_data.to_dict(orient='records'):
+                clean_nans(record)
+                records.append(record)
 
-                self.load_records(records, index_name)
-                num_records += batch_data.shape[0]
-                logger.info("Loading %d records. Total: %d / %d (%f%%)", len(
-                    records), num_records, total_records, round(num_records * 100 / total_records, 2))
-            if total_records != num_records:
-                raise ValueError(
-                    'mismatch in {num_records} records loaded to {total_records} total records')
+            self.load_records(records, index_name)
+            num_records += batch_data.shape[0]
+            logger.info("Loading %d records. Total: %d / %d (%f%%)", len(
+                records), num_records, total_records, round(num_records * 100 / total_records, 2))
+        if total_records != num_records:
+            raise ValueError(
+                'mismatch in {num_records} records loaded to {total_records} total records')
 
-        def load_records(self, records, index, mapping=None):
-            """Load batch of records"""
-            if not self.es.indices.exists(index):
-                self.create_index(index, mapping=mapping)
+    def load_records(self, records, index, mapping=None):
+        """Load batch of records"""
+        if not self.es.indices.exists(index):
+            self.create_index(index, mapping=mapping)
 
-            for success, info in helpers.parallel_bulk(self.es, records, index=index):
-                if not success:
-                    #   logging.error(info)
-                    logger.info(info)
-                    logger.info('Doc failed in parallel loading')
+        for success, info in helpers.parallel_bulk(self.es, records, index=index):
+            if not success:
+                #   logging.error(info)
+                logger.info(info)
+                logger.info('Doc failed in parallel loading')
 
-        def create_index(self, index_name, mapping=None):
-            logger.info('Creating index with name %s', index_name)
+    def create_index(self, index_name, mapping=None):
+        logger.info('Creating index with name %s', index_name)
 
-            if mapping is None:
-                mapping = DEFAULT_MAPPING
+        if mapping is None:
+            mapping = DEFAULT_MAPPING
 
-            self.es.indices.create(index=index_name,
-                                   body=mapping)
+        self.es.indices.create(index=index_name,
+                               body=mapping)
 
-        def delete_index(self, index):
-            if self.es.indices.exists(index):
-                self.es.indices.delete(index=index, ignore=[400, 404])
+    def delete_index(self, index):
+        if self.es.indices.exists(index):
+            self.es.indices.delete(index=index, ignore=[400, 404])
 
-        def delete_records_by_dashboard_id(self, index, dashboard_id):
-            if self.es.indices.exists(index):
-                query = get_query_by_dashboard_id(dashboard_id)
-                self.es.delete_by_query(index=index, body=query, refresh=True)
-
-        def delete_dashboard_record(self, dashboard_id):
-            """Delete individual dashboard record"""
-            logger.info("Deleting analysis %s", dashboard_id)
-            self.delete_records_by_dashboard_id(
-                self.DASHBOARD_ENTRY_INDEX, dashboard_id)
-
-        def is_loaded(self, dashboard_id):
-            """Return true if analysis with dashboard_id exists"""
-
-            query = get_query_by_dashboard_id(dashboard_id)
-            count = self.es.count(
-                body=query, index=self.DASHBOARD_ENTRY_INDEX)
-
-            return count["count"] == 1
-
-        # Views
-
-        def get_views(self):
-            """Returns list of all view names"""
-            response = self.security.get_role()
-            views = [response_key[:-len("_dashboardReader")] for response_key in response.keys(
-            ) if response_key.endswith("_dashboardReader")]
-
-            return views
-
-        def is_view_exist(self, view):
-            """Returns true if view name exists"""
-            view_name = f'{view}_dashboardReader'
+    def delete_record_by_id(self, index, dashboard_id):
+        if self.es.indices.exists(index):
 
             try:
-                result = self.es.security.get_role(name=view_name)
-                return view_name in result
+                self.es.delete(index, dashboard_id, refresh=True)
 
             except NotFoundError:
-                return False
+                return
 
-        def verify_dashboards_loaded(self, dashboards):
-            """Checks that all dashboards are loaded"""
-            unloaded_dashboards = [
-                dashboard for dashboard in dashboards if not self.is_loaded(dashboard)]
+    def delete_records_by_dashboard_id(self, index, dashboard_id):
+        if self.es.indices.exists(index):
+            query = get_query_by_dashboard_id(dashboard_id)
+            self.es.delete_by_query(index=index, body=query, refresh=True)
 
-            assert len(
-                unloaded_dashboards) == 0, f"Dashboards are not loaded: {unloaded_dashboards}"
+    def delete_dashboard_record(self, dashboard_id):
+        """Delete individual dashboard record"""
+        logger.info("Deleting analysis %s", dashboard_id)
+        self.delete_records_by_dashboard_id(
+            self.DASHBOARD_ENTRY_INDEX, dashboard_id)
 
-        def add_view(self, view, dashboards=None):
-            """Adds a new view"""
-            view_name = f'{view}_dashboardReader'
+    def is_loaded(self, dashboard_id):
+        """Return true if analysis with dashboard_id exists"""
+        try:
+            result = self.es.get(self.DASHBOARD_ENTRY_INDEX, dashboard_id)
+            return True
 
-            assert not self.is_view_exist(
-                view_name), f'View with name {view} already exists'
+        except NotFoundError:
+            return False
 
-            if dashboards is None:
-                dashboards = []
+    # Views
 
-            self.verify_dashboards_loaded(dashboards)
+    def get_views(self):
+        """Returns list of all view names"""
+        response = self.es.security.get_role()
+        views = [response_key[:-len("_dashboardReader")] for response_key in response.keys(
+        ) if response_key.endswith("_dashboardReader")]
 
-            self.es.security.put_role(name=view_name, body={'indices': [{
-                'names': [self.DASHBOARD_ENTRY_INDEX] + dashboards,
+        return views
+
+    def is_view_exist(self, view):
+        """Returns true if view name exists"""
+        view_name = f'{view}_dashboardReader'
+
+        try:
+            result = self.es.security.get_role(name=view_name)
+            return view_name in result
+
+        except NotFoundError:
+            return False
+
+    def verify_dashboards_loaded(self, dashboards):
+        """Checks that all dashboards are loaded"""
+        unloaded_dashboards = [
+            dashboard for dashboard in dashboards if not self.is_loaded(dashboard)]
+
+        assert len(
+            unloaded_dashboards) == 0, f"Dashboards are not loaded: {unloaded_dashboards}"
+
+    def add_view(self, view, dashboards=None):
+        """Adds a new view"""
+        view_name = f'{view}_dashboardReader'
+
+        assert not self.is_view_exist(
+            view_name), f'View with name {view} already exists'
+
+        if dashboards is None:
+            dashboards = []
+
+        self.verify_dashboards_loaded(dashboards)
+
+        self.es.security.put_role(name=view_name, body={'indices': [{
+            'names': [self.DASHBOARD_ENTRY_INDEX] + dashboards,
+            'privileges': ["read"]
+        }]})
+
+        logger.info('Added new view: %s', view)
+
+    def add_dashboards_to_view(self, view, dashboards):
+        """Add aa list of dashboard IDs to a particular view"""
+        assert self.is_view_exist(
+            view), f'View with name {view} does not exist'
+
+        self.verify_dashboards_loaded(dashboards)
+
+        view_name = f'{view}_dashboardReader'
+        view_data = self.es.security.get_role(name=view_name)
+
+        view_indices = list(
+            view_data[view_name]["indices"][0]["names"]) + dashboards
+
+        self.es.security.put_role(name=view_name, body={
+            'indices': [{
+                'names': list(set(view_indices)),
                 'privileges': ["read"]
-            }]})
+            }]
+        })
 
-            logger.info('Added new view: %s', view)
+        logger.info('Added %d dashboards to view %s',
+                    len(dashboards), view)
 
-        def add_dashboards_to_view(self, view, dashboards):
-            """Add aa list of dashboard IDs to a particular view"""
-            assert self.is_view_exist(
-                view), f'View with name {view} does not exist'
+    def add_dashboard_to_views(self, dashboard, views):
+        """Add a dashboard to all given views"""
+        assert self.is_loaded(
+            dashboard), f"Dashboard with id {dashboard} is not loaded, please load first"
+        nonexistant_views = [
+            view for view in views if not self.is_view_exist(view)]
 
-            self.verify_dashboards_loaded(dashboards)
+        assert len(
+            nonexistant_views) == 0, f"Views do not exist: {nonexistant_views}"
 
-            view_name = f'{view}_dashboardReader'
-            view_data = self.es.security.get_role(name=view_name)
+        for view in views:
+            self.add_dashboards_to_view(view, [dashboard])
 
-            view_indices = list(
-                view_data[view_name]["indices"][0]["names"]) + dashboards
+    def remove_view(self, view):
+        """Removes view"""
+        view_name = f'{view}_dashboardReader'
 
-            self.es.security.put_role(name=view_name, body={
-                'indices': [{
-                    'names': list(set(view_indices)),
-                    'privileges': ["read"]
-                }]
-            })
+        self.es.security.delete_role(view_name)
+        logger.info('Removed view %s', view)
 
-            logger.info('Added %d dashboards to view %s',
-                        len(dashboards), view)
+    def remove_dashboard_from_views(self, dashboard_id, views=None):
+        """Remove dashboard_id from views if specified, all views if not"""
+        if views is None:
+            logger.info("Fetching all views")
+            response = self.es.security.get_role()
+            views = [response_key for response_key in response.keys(
+            ) if response_key.endswith("_dashboardReader")]
 
-        def add_dashboard_to_views(self, dashboard, views):
-            """Add a dashboard to all given views"""
-            assert self.is_loaded(
-                dashboard), f"Dashboard with id {dashboard} is not loaded, please load first"
-            nonexistant_views = [
-                view for view in views if not self.is_view_exist(view)]
+        else:
+            views = [f"{view}_dashboardReader" for view in views]
 
-            assert len(
-                nonexistant_views) == 0, f"Views do not exist: {nonexistant_views}"
+        logger.info("Checking removal of %s from %d views",
+                    dashboard_id, len(views))
 
-            for view in views:
-                self.add_dashboards_to_views(view, [dashboard])
+        for view in views:
+            response = self.es.security.get_role(name=view)
+            view_data = response[view]
 
-        def remove_view(self, view):
-            """Removes view"""
-            view_name = f'{view}_dashboardReader'
+            view_indices = list(view_data["indices"][0]["names"])
 
-            self.es.security.delete_role(view_name)
-            logger.info('Removed view %s', view)
+            if dashboard_id in view_indices:
+                logger.info("Removing from %s", view)
 
-        def remove_dashboard_from_views(dashboard_id, views=None):
-            """Remove dashboard_id from views if specified, all views if not"""
-            if views is None:
-                logger.info("Fetching all views")
-                response = self.es.security.get_role()
-                views = [response_key for response_key in response.keys(
-                ) if response_key.endswith("_dashboardReader")]
+                view_indices.remove(dashboard_id)
 
-            else:
-                views = [f"{view}_dashboardReader" for view in views]
+                self.es.security.put_role(name=view, body={
+                    'indices': [{
+                        'names': view_indices,
+                        'privileges': ["read"]
+                    }]
+                })
 
-            logger.info("Checking removal of %s from %d views",
-                        dashboard_id, len(views))
-
-            for view in views:
-                response = self.es.security.get_role(name=view)
-                view_data = response[view]
-
-                view_indices = list(view_data["indices"][0]["names"])
-
-                if dashboard_id in view_indices:
-                    logger.info("Removing from %s", view)
-
-                    view_indices.remove(dashboard_id)
-
-                    self.es.security.put_role(name=view, body={
-                        'indices': [{
-                            'names': view_indices,
-                            'privileges': ["read"]
-                        }]
-                    })
-
-            logger.info('Removed %s from %d views', dashboard_id, len(views))
+        logger.info('Removed %s from %d views', dashboard_id, len(views))
 
 
 def get_query_by_dashboard_id(dashboard_id):

@@ -53,7 +53,9 @@ setup(
         'elasticsearch>=7.0.0,<8.0.0',
         'numpy',
         'pandas',
-        "-e git+https://github.com/shahcompbio/scgenome.git#egg=scgenome"
+        "scgenome @ git+https://github.com/shahcompbio/scgenome.git#egg=scgenome",
+
+        "pyyaml"
     ],
     entry_points="""
     [console_scripts]

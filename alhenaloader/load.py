@@ -3,13 +3,6 @@ from scgenome.loaders.hmmcopy import load_hmmcopy_data
 from scgenome.loaders.annotation import load_annotation_data
 import pandas as pd
 
-GET_DATA = {
-    f"qc": get_qc_data,
-    f"segs": get_segs_data,
-    f"bins": get_bins_data,
-    f"gc_bias": get_gc_bias_data,
-}
-
 
 def clean_data(dashboard_id, es):
     for data_type, get_data in GET_DATA.items():
@@ -85,6 +78,14 @@ def get_gc_bias_data(hmmcopy_data):
         gc_bias_df = gc_bias_df.append(new_df, ignore_index=True)
 
     return gc_bias_df
+
+
+GET_DATA = {
+    f"qc": get_qc_data,
+    f"segs": get_segs_data,
+    f"bins": get_bins_data,
+    f"gc_bias": get_gc_bias_data,
+}
 
 
 chr_prefixed = {str(a): '0' + str(a) for a in range(1, 10)}

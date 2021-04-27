@@ -36,6 +36,9 @@ LOGGING_LEVELS = {
 }  #: a mapping of `verbose` option counts to logging levels
 
 
+LOGGING_FORMAT = "%(asctime)s - %(levelname)s - %(funcName)s - %(message)s"
+
+
 class Info(object):
     """An information object to pass data between CLI functions."""
 
@@ -61,8 +64,10 @@ def cli(info: Info, verbose: int, host: str, port: int, id: str):
     """Run alhenaloader."""
     # Use the verbosity count to determine the logging level...
     if verbose > 0:
-        logging.basicConfig(
-            level=LOGGING_LEVELS[verbose]
+        logging.basicConfig(format=LOGGING_FORMAT)
+        logger = logging.getLogger('alhena')
+        logger.setLevel(
+            LOGGING_LEVELS[verbose]
             if verbose in LOGGING_LEVELS
             else logging.DEBUG
         )
@@ -73,6 +78,7 @@ def cli(info: Info, verbose: int, host: str, port: int, id: str):
                 fg="yellow",
             )
         )
+
     info.verbose = verbose
     info.es = ES(host, port)
     info.id = id

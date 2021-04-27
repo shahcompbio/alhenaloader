@@ -9,8 +9,8 @@ import numpy as np
 import logging
 import urllib3
 
+logger = logging.getLogger('alhena')
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-logger = logging.getLogger('alhena_loading')
 
 
 DEFAULT_MAPPING = {
@@ -65,7 +65,7 @@ class ES(object):
         if not self.es.indices.exists(index):
             self.create_index(index, mapping=mapping)
 
-        logger.info('Loading record')
+        logger.info('Loading record with id %s', record_id)
         self.es.index(index=index, id=record_id, body=record)
 
     def load_df(self, df, index_name, batch_size=int(1e5)):
@@ -86,8 +86,8 @@ class ES(object):
 
             self.load_records(records, index_name)
             num_records += batch_data.shape[0]
-            logger.info("Loading %d records. Total: %d / %d (%f%%)", len(
-                records), num_records, total_records, round(num_records * 100 / total_records, 2))
+            logger.info("Loading %d records. Total: %d / %d (%.1f%%)", len(
+                records), num_records, total_records, num_records * 100 / total_records)
         if total_records != num_records:
             raise ValueError(
                 'mismatch in {num_records} records loaded to {total_records} total records')
@@ -114,12 +114,14 @@ class ES(object):
 
     def delete_index(self, index):
         if self.es.indices.exists(index):
+            logger.info("Deleting index %s", index)
             self.es.indices.delete(index=index, ignore=[400, 404])
 
     def delete_record_by_id(self, index, dashboard_id):
         if self.es.indices.exists(index):
 
             try:
+                logger.info("Deleting record with ID %s", dashboard_id)
                 self.es.delete(index, dashboard_id, refresh=True)
 
             except NotFoundError:
@@ -127,6 +129,8 @@ class ES(object):
 
     def delete_records_by_dashboard_id(self, index, dashboard_id):
         if self.es.indices.exists(index):
+
+            logger.info("Deleting records from dashboard %s", dashboard_id)
             query = get_query_by_dashboard_id(dashboard_id)
             self.es.delete_by_query(index=index, body=query, refresh=True)
 
@@ -139,7 +143,7 @@ class ES(object):
     def is_loaded(self, dashboard_id):
         """Return true if analysis with dashboard_id exists"""
         try:
-            result = self.es.get(self.DASHBOARD_ENTRY_INDEX, dashboard_id)
+            self.es.get(self.DASHBOARD_ENTRY_INDEX, dashboard_id)
             return True
 
         except NotFoundError:
@@ -267,8 +271,6 @@ class ES(object):
                         'privileges': ["read"]
                     }]
                 })
-
-        logger.info('Removed %s from %d views', dashboard_id, len(views))
 
 
 def get_query_by_dashboard_id(dashboard_id):

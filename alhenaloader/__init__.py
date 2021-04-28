@@ -8,9 +8,9 @@ Loading scripts for Alhena's DB
 .. moduleauthor:: Samantha Leung <leungs1@mskcc.org>
 """
 
-from .version import __version__, __release__  # noqa
-from .load import clean_data
-from .load import load_qc_from_dirs
-from .load import load_dashboard_entry
-from .load import load_data
-from .api import ES
+from alhenaloader.version import __version__, __release__  # noqa
+from alhenaloader.load import clean_data
+from alhenaloader.load import load_qc_from_dirs
+from alhenaloader.load import load_dashboard_entry
+from alhenaloader.load import load_data
+from alhenaloader.api import ES

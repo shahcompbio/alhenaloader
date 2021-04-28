@@ -9,3 +9,5 @@ Loading scripts for Alhena's DB
 """
 
 from .version import __version__, __release__  # noqa
+import .load
+import .api

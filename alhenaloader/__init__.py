@@ -8,6 +8,6 @@ Loading scripts for Alhena's DB
 .. moduleauthor:: Samantha Leung <leungs1@mskcc.org>
 """
 
-from .version import __version__, __release__  # noqa
-import .load
-import .api
+# from .version import __version__, __release__  # noqa
+# from .load import *
+# from .api import *

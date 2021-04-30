@@ -18,7 +18,6 @@ It can be used as a handy facility for running the task from a command line.
 .. currentmodule:: alhenaloader.cli
 .. moduleauthor:: Samantha Leung <leungs1@mskcc.org>
 """
-import logging
 from typing import List
 import click
 from scgenome.loaders.qc import load_qc_data
@@ -26,17 +25,6 @@ from scgenome.loaders.qc import load_qc_data
 from alhenaloader.api import ES
 import alhenaloader.load
 from .__init__ import __version__
-
-LOGGING_LEVELS = {
-    0: logging.NOTSET,
-    1: logging.ERROR,
-    2: logging.WARN,
-    3: logging.INFO,
-    4: logging.DEBUG,
-}  #: a mapping of `verbose` option counts to logging levels
-
-
-LOGGING_FORMAT = "%(asctime)s - %(levelname)s - %(funcName)s - %(message)s"
 
 
 class Info(object):
@@ -55,31 +43,13 @@ pass_info = click.make_pass_decorator(Info, ensure=True)
 # Change the options to below to suit the actual options for your task (or
 # tasks).
 @click.group(chain=True)
-@click.option("--verbose", "-v", count=True, help="Enable verbose output.")
 @click.option('--host', default='localhost', help='Hostname for Elasticsearch server')
 @click.option('--port', default=9200, help='Port for Elasticsearch server')
 @click.option('--id', help="ID of dashboard")
 @pass_info
-def cli(info: Info, verbose: int, host: str, port: int, id: str):
+def cli(info: Info, host: str, port: int, id: str):
     """Run alhenaloader."""
-    # Use the verbosity count to determine the logging level...
-    if verbose > 0:
-        logging.basicConfig(format=LOGGING_FORMAT)
-        logger = logging.getLogger('alhena')
-        logger.setLevel(
-            LOGGING_LEVELS[verbose]
-            if verbose in LOGGING_LEVELS
-            else logging.DEBUG
-        )
-        click.echo(
-            click.style(
-                f"Verbose logging is enabled. "
-                f"(LEVEL={logging.getLogger().getEffectiveLevel()})",
-                fg="yellow",
-            )
-        )
 
-    info.verbose = verbose
     info.es = ES(host, port)
     info.id = id
 
@@ -88,7 +58,9 @@ def cli(info: Info, verbose: int, host: str, port: int, id: str):
 @pass_info
 def clean(info: Info):
     """Delete indices/records associated with dashboard ID"""
-    assert info.id is not None, "Please specify a dashboard ID"
+    if info.id is None:
+        click.secho("Please specify a dashboard ID", fg="yellow")
+        return
 
     alhenaloader.load.clean_data(info.id, info.es)
 
@@ -111,10 +83,16 @@ def clean(info: Info):
 @pass_info
 def load(info: Info, qc: str, alignment: str, hmmcopy: str, annotation: str, views: List[str], library: str, sample: str, description: str, metadata: List[str]):
     """Load records associated with dashboard ID in given directories"""
-    assert info.id is not None, "Please specify a dashboard ID"
+    if info.id is None:
+        click.secho("Please specify a dashboard ID", fg="yellow")
+        return
 
     is_all_dir = alignment is not None and hmmcopy is not None and annotation is not None
-    assert qc is not None or is_all_dir, "Please provide a qc directory or all of annotation, hmmcopy, and alignment directories"
+
+    if qc is None and not is_all_dir:
+        click.secho(
+            "Please provide a qc directory or all of annotation, hmmcopy, and alignment directories")
+        return
 
     if qc is not None:
         data = load_qc_data(qc)

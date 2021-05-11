@@ -5,11 +5,10 @@ import ssl
 from elasticsearch.connection import create_ssl_context
 import os
 import numpy as np
+import click
 
-import logging
 import urllib3
 
-logger = logging.getLogger('alhena')
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
@@ -65,7 +64,7 @@ class ES(object):
         if not self.es.indices.exists(index):
             self.create_index(index, mapping=mapping)
 
-        logger.info('Loading record with id %s', record_id)
+        click.echo('Loading record with id %s', record_id)
         self.es.index(index=index, id=record_id, body=record)
 
     def load_df(self, df, index_name, batch_size=int(1e5)):
@@ -86,7 +85,7 @@ class ES(object):
 
             self.load_records(records, index_name)
             num_records += batch_data.shape[0]
-            logger.info("Loading %d records. Total: %d / %d (%.1f%%)", len(
+            click.echo("Loading %d records. Total: %d / %d (%.1f%%)", len(
                 records), num_records, total_records, num_records * 100 / total_records)
         if total_records != num_records:
             raise ValueError(
@@ -99,12 +98,11 @@ class ES(object):
 
         for success, info in helpers.parallel_bulk(self.es, records, index=index):
             if not success:
-                #   logging.error(info)
-                logger.info(info)
-                logger.info('Doc failed in parallel loading')
+                click.secho('Doc failed in parallel loading', fg="red")
+                click.echo(info)
 
     def create_index(self, index_name, mapping=None):
-        logger.info('Creating index with name %s', index_name)
+        click.echo('Creating index with name %s', index_name)
 
         if mapping is None:
             mapping = DEFAULT_MAPPING
@@ -114,14 +112,14 @@ class ES(object):
 
     def delete_index(self, index):
         if self.es.indices.exists(index):
-            logger.info("Deleting index %s", index)
+            click.echo("Deleting index %s", index)
             self.es.indices.delete(index=index, ignore=[400, 404])
 
     def delete_record_by_id(self, index, dashboard_id):
         if self.es.indices.exists(index):
 
             try:
-                logger.info("Deleting record with ID %s", dashboard_id)
+                click.echo("Deleting record with ID %s", dashboard_id)
                 self.es.delete(index, dashboard_id, refresh=True)
 
             except NotFoundError:
@@ -130,13 +128,13 @@ class ES(object):
     def delete_records_by_dashboard_id(self, index, dashboard_id):
         if self.es.indices.exists(index):
 
-            logger.info("Deleting records from dashboard %s", dashboard_id)
+            click.echo("Deleting records from dashboard %s", dashboard_id)
             query = get_query_by_dashboard_id(dashboard_id)
             self.es.delete_by_query(index=index, body=query, refresh=True)
 
     def delete_dashboard_record(self, dashboard_id):
         """Delete individual dashboard record"""
-        logger.info("Deleting analysis %s", dashboard_id)
+        click.echo("Deleting analysis %s", dashboard_id)
         self.delete_records_by_dashboard_id(
             self.DASHBOARD_ENTRY_INDEX, dashboard_id)
 
@@ -195,7 +193,7 @@ class ES(object):
             'privileges': ["read"]
         }]})
 
-        logger.info('Added new view: %s', view)
+        click.echo('Added new view: %s', view)
 
     def add_dashboards_to_view(self, view, dashboards):
         """Add aa list of dashboard IDs to a particular view"""
@@ -217,8 +215,8 @@ class ES(object):
             }]
         })
 
-        logger.info('Added %d dashboards to view %s',
-                    len(dashboards), view)
+        click.echo('Added %d dashboards to view %s',
+                   len(dashboards), view)
 
     def add_dashboard_to_views(self, dashboard, views):
         """Add a dashboard to all given views"""
@@ -238,12 +236,12 @@ class ES(object):
         view_name = f'{view}_dashboardReader'
 
         self.es.security.delete_role(view_name)
-        logger.info('Removed view %s', view)
+        click.echo('Removed view %s', view)
 
     def remove_dashboard_from_views(self, dashboard_id, views=None):
         """Remove dashboard_id from views if specified, all views if not"""
         if views is None:
-            logger.info("Fetching all views")
+            click.echo("Fetching all views")
             response = self.es.security.get_role()
             views = [response_key for response_key in response.keys(
             ) if response_key.endswith("_dashboardReader")]
@@ -251,8 +249,8 @@ class ES(object):
         else:
             views = [f"{view}_dashboardReader" for view in views]
 
-        logger.info("Checking removal of %s from %d views",
-                    dashboard_id, len(views))
+        click.echo("Checking removal of %s from %d views",
+                   dashboard_id, len(views))
 
         for view in views:
             response = self.es.security.get_role(name=view)
@@ -261,7 +259,7 @@ class ES(object):
             view_indices = list(view_data["indices"][0]["names"])
 
             if dashboard_id in view_indices:
-                logger.info("Removing from %s", view)
+                click.echo("Removing from %s", view)
 
                 view_indices.remove(dashboard_id)
 

@@ -85,8 +85,8 @@ class ES(object):
 
             self.load_records(records, index_name)
             num_records += batch_data.shape[0]
-            click.echo("Loading %d records. Total: %d / %d (%.1f%%)", len(
-                records), num_records, total_records, num_records * 100 / total_records)
+            click.echo(f"Loading {len(
+                records)} records. Total: {num_records} / {total_records} {(num_records * 100 / total_records): .1f}")
         if total_records != num_records:
             raise ValueError(
                 'mismatch in {num_records} records loaded to {total_records} total records')
@@ -102,7 +102,7 @@ class ES(object):
                 click.echo(info)
 
     def create_index(self, index_name, mapping=None):
-        click.echo('Creating index with name %s', index_name)
+        click.echo(f'Creating index with name {index_name}')
 
         if mapping is None:
             mapping = DEFAULT_MAPPING
@@ -112,14 +112,14 @@ class ES(object):
 
     def delete_index(self, index):
         if self.es.indices.exists(index):
-            click.echo("Deleting index %s", index)
+            click.echo(f"Deleting index {index}")
             self.es.indices.delete(index=index, ignore=[400, 404])
 
     def delete_record_by_id(self, index, dashboard_id):
         if self.es.indices.exists(index):
 
             try:
-                click.echo("Deleting record with ID %s", dashboard_id)
+                click.echo(f"Deleting record with ID {dashboard_id}")
                 self.es.delete(index, dashboard_id, refresh=True)
 
             except NotFoundError:
@@ -128,13 +128,13 @@ class ES(object):
     def delete_records_by_dashboard_id(self, index, dashboard_id):
         if self.es.indices.exists(index):
 
-            click.echo("Deleting records from dashboard %s", dashboard_id)
+            click.echo(f"Deleting records from dashboard {dashboard_id}")
             query = get_query_by_dashboard_id(dashboard_id)
             self.es.delete_by_query(index=index, body=query, refresh=True)
 
     def delete_dashboard_record(self, dashboard_id):
         """Delete individual dashboard record"""
-        click.echo("Deleting analysis %s", dashboard_id)
+        click.echo(f"Deleting analysis {dashboard_id}")
         self.delete_records_by_dashboard_id(
             self.DASHBOARD_ENTRY_INDEX, dashboard_id)
 
@@ -193,7 +193,7 @@ class ES(object):
             'privileges': ["read"]
         }]})
 
-        click.echo('Added new view: %s', view)
+        click.echo(f'Added new view: {view}')
 
     def add_dashboards_to_view(self, view, dashboards):
         """Add aa list of dashboard IDs to a particular view"""
@@ -215,8 +215,7 @@ class ES(object):
             }]
         })
 
-        click.echo('Added %d dashboards to view %s',
-                   len(dashboards), view)
+        click.echo(f'Added {len(dashboards)} dashboards to view {view}')
 
     def add_dashboard_to_views(self, dashboard, views):
         """Add a dashboard to all given views"""
@@ -236,7 +235,7 @@ class ES(object):
         view_name = f'{view}_dashboardReader'
 
         self.es.security.delete_role(view_name)
-        click.echo('Removed view %s', view)
+        click.echo(f'Removed view {view}')
 
     def remove_dashboard_from_views(self, dashboard_id, views=None):
         """Remove dashboard_id from views if specified, all views if not"""
@@ -249,8 +248,8 @@ class ES(object):
         else:
             views = [f"{view}_dashboardReader" for view in views]
 
-        click.echo("Checking removal of %s from %d views",
-                   dashboard_id, len(views))
+        click.echo(
+            f"Checking removal of {dashboard_id} from {len(views)} views")
 
         for view in views:
             response = self.es.security.get_role(name=view)
@@ -259,7 +258,7 @@ class ES(object):
             view_indices = list(view_data["indices"][0]["names"])
 
             if dashboard_id in view_indices:
-                click.echo("Removing from %s", view)
+                click.echo(f"Removing from {view}")
 
                 view_indices.remove(dashboard_id)
 

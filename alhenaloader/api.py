@@ -85,8 +85,8 @@ class ES(object):
 
             self.load_records(records, index_name)
             num_records += batch_data.shape[0]
-            click.echo(f"Loading {len(
-                records)} records. Total: {num_records} / {total_records} {(num_records * 100 / total_records): .1f}")
+            click.echo(
+                f"Loading {len(records)} records. Total: {num_records} / {total_records} {(num_records * 100 / total_records): .1f}")
         if total_records != num_records:
             raise ValueError(
                 'mismatch in {num_records} records loaded to {total_records} total records')

@@ -64,7 +64,7 @@ class ES(object):
         if not self.es.indices.exists(index):
             self.create_index(index, mapping=mapping)
 
-        click.echo('Loading record with id %s', record_id)
+        click.echo(f'Loading record with id {record_id}')
         self.es.index(index=index, id=record_id, body=record)
 
     def load_df(self, df, index_name, batch_size=int(1e5)):

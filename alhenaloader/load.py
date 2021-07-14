@@ -4,9 +4,9 @@ from scgenome.loaders.annotation import load_annotation_data
 import pandas as pd
 
 
-def clean_data(dashboard_id, es):
+def clean_data(analysis_id, es):
     for data_type, get_data in GET_DATA.items():
-        es.delete_index(f"{dashboard_id.lower()}_{data_type}")
+        es.delete_index(f"{analysis_id.lower()}_{data_type}")
 
 
 def load_qc_from_dirs(alignment, hmmcopy, annotation):
@@ -23,27 +23,27 @@ def load_qc_from_dirs(alignment, hmmcopy, annotation):
     return qc_data
 
 
-def load_dashboard_entry(dashboard_id, library_id, sample_id, description, metadata, es):
+def load_dashboard_entry(analysis_id, library_id, sample_id, description, metadata, es):
     record = {
         **metadata
     }
 
-    record["dashboard_id"] = dashboard_id
-    record["jira_id"] = dashboard_id
+    record["dashboard_id"] = analysis_id
+    record["jira_id"] = analysis_id
     record["dashboard_type"] = "single"
     record["library_id"] = library_id
     record["sample_id"] = sample_id
     record["description"] = description
 
-    es.load_record(record, dashboard_id, es.DASHBOARD_ENTRY_INDEX)
+    es.load_record(record, analysis_id, es.ANALYSIS_ENTRY_INDEX)
 
 
-def load_data(data, dashboard_id, es):
+def load_data(data, analysis_id, es):
     """Load dataframes"""
 
     for data_type, get_data in GET_DATA.items():
         df = get_data(data)
-        es.load_df(df, f"{dashboard_id.lower()}_{data_type}")
+        es.load_df(df, f"{analysis_id.lower()}_{data_type}")
 
 
 def get_qc_data(hmmcopy_data):

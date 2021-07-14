@@ -37,7 +37,7 @@ DEFAULT_MAPPING = {
 class ES(object):
     """Alhena Elasticsearch connection"""
 
-    DASHBOARD_ENTRY_INDEX = "analyses"
+    ANALYSIS_ENTRY_INDEX = "analyses"
 
     def __init__(self, host, port):
         """Create a new instance."""
@@ -115,169 +115,169 @@ class ES(object):
             click.echo(f"Deleting index {index}")
             self.es.indices.delete(index=index, ignore=[400, 404])
 
-    def delete_record_by_id(self, index, dashboard_id):
+    def delete_record_by_id(self, index, analysis_id):
         if self.es.indices.exists(index):
 
             try:
-                click.echo(f"Deleting record with ID {dashboard_id}")
-                self.es.delete(index, dashboard_id, refresh=True)
+                click.echo(f"Deleting record with ID {analysis_id}")
+                self.es.delete(index, analysis_id, refresh=True)
 
             except NotFoundError:
                 return
 
-    def delete_records_by_dashboard_id(self, index, dashboard_id):
+    def delete_records_by_analysis_id(self, index, analysis_id):
         if self.es.indices.exists(index):
 
-            click.echo(f"Deleting records from dashboard {dashboard_id}")
-            query = get_query_by_dashboard_id(dashboard_id)
+            click.echo(f"Deleting records from analysis {analysis_id}")
+            query = get_query_by_analysis_id(analysis_id)
             self.es.delete_by_query(index=index, body=query, refresh=True)
 
-    def delete_dashboard_record(self, dashboard_id):
-        """Delete individual dashboard record"""
-        click.echo(f"Deleting analysis {dashboard_id}")
-        self.delete_records_by_dashboard_id(
-            self.DASHBOARD_ENTRY_INDEX, dashboard_id)
+    def delete_analysis_record(self, analysis_id):
+        """Delete individual analysis record"""
+        click.echo(f"Deleting analysis {analysis_id}")
+        self.delete_records_by_analysis_id(
+            self.ANALYSIS_ENTRY_INDEX, analysis_id)
 
-    def is_loaded(self, dashboard_id):
-        """Return true if analysis with dashboard_id exists"""
+    def is_loaded(self, analysis_id):
+        """Return true if analysis with analysis_id exists"""
         try:
-            self.es.get(self.DASHBOARD_ENTRY_INDEX, dashboard_id)
+            self.es.get(self.ANALYSIS_ENTRY_INDEX, analysis_id)
             return True
 
         except NotFoundError:
             return False
 
-    # Views
+    # Projects
 
-    def get_views(self):
-        """Returns list of all view names"""
+    def get_projects(self):
+        """Returns list of all project names"""
         response = self.es.security.get_role()
-        views = [response_key[:-len("_dashboardReader")] for response_key in response.keys(
+        projects = [response_key[:-len("_dashboardReader")] for response_key in response.keys(
         ) if response_key.endswith("_dashboardReader")]
 
-        return views
+        return projects
 
-    def is_view_exist(self, view):
-        """Returns true if view name exists"""
-        view_name = f'{view}_dashboardReader'
+    def is_project_exist(self, project):
+        """Returns true if project name exists"""
+        project_name = f'{project}_dashboardReader'
 
         try:
-            result = self.es.security.get_role(name=view_name)
-            return view_name in result
+            result = self.es.security.get_role(name=project_name)
+            return project_name in result
 
         except NotFoundError:
             return False
 
-    def verify_dashboards_loaded(self, dashboards):
-        """Checks that all dashboards are loaded"""
-        unloaded_dashboards = [
-            dashboard for dashboard in dashboards if not self.is_loaded(dashboard)]
+    def verify_analyses_loaded(self, analyses):
+        """Checks that all analyses are loaded"""
+        unloaded_analyses = [
+            analysis for analysis in analyses if not self.is_loaded(analysis)]
 
         assert len(
-            unloaded_dashboards) == 0, f"Dashboards are not loaded: {unloaded_dashboards}"
+            unloaded_analyses) == 0, f"Analyses are not loaded: {unloaded_analyses}"
 
-    def add_view(self, view, dashboards=None):
-        """Adds a new view"""
-        view_name = f'{view}_dashboardReader'
+    def add_project(self, project, analyses=None):
+        """Adds a new project"""
+        project_name = f'{project}_dashboardReader'
 
-        assert not self.is_view_exist(
-            view_name), f'View with name {view} already exists'
+        assert not self.is_project_exist(
+            project_name), f'project with name {project} already exists'
 
-        if dashboards is None:
-            dashboards = []
+        if analyses is None:
+            analyses = []
 
-        self.verify_dashboards_loaded(dashboards)
+        self.verify_analyses_loaded(analyses)
 
-        self.es.security.put_role(name=view_name, body={'indices': [{
-            'names': [self.DASHBOARD_ENTRY_INDEX] + dashboards,
+        self.es.security.put_role(name=project_name, body={'indices': [{
+            'names': [self.DASHBOARD_ENTRY_INDEX] + analyses,
             'privileges': ["read"]
         }]})
 
-        click.echo(f'Added new view: {view}')
+        click.echo(f'Added new project: {project}')
 
-    def add_dashboards_to_view(self, view, dashboards):
-        """Add aa list of dashboard IDs to a particular view"""
-        assert self.is_view_exist(
-            view), f'View with name {view} does not exist'
+    def add_analyses_to_project(self, project, analyses):
+        """Add aa list of analysis IDs to a particular project"""
+        assert self.is_project_exist(
+            project), f'project with name {project} does not exist'
 
-        self.verify_dashboards_loaded(dashboards)
+        self.verify_analyses_loaded(analyses)
 
-        view_name = f'{view}_dashboardReader'
-        view_data = self.es.security.get_role(name=view_name)
+        project_name = f'{project}_dashboardReader'
+        project_data = self.es.security.get_role(name=project_name)
 
-        view_indices = list(
-            view_data[view_name]["indices"][0]["names"]) + dashboards
+        project_indices = list(
+            project_data[project_name]["indices"][0]["names"]) + analyses
 
-        self.es.security.put_role(name=view_name, body={
+        self.es.security.put_role(name=project_name, body={
             'indices': [{
-                'names': list(set(view_indices)),
+                'names': list(set(project_indices)),
                 'privileges': ["read"]
             }]
         })
 
-        click.echo(f'Added {len(dashboards)} dashboards to view {view}')
+        click.echo(f'Added {len(analyses)} analyses to project {project}')
 
-    def add_dashboard_to_views(self, dashboard, views):
-        """Add a dashboard to all given views"""
+    def add_analysis_to_projects(self, analysis, projects):
+        """Add an analysis to all given projects"""
         assert self.is_loaded(
-            dashboard), f"Dashboard with id {dashboard} is not loaded, please load first"
-        nonexistant_views = [
-            view for view in views if not self.is_view_exist(view)]
+            analysis), f"Analysis with id {analysis} is not loaded, please load first"
+        nonexistant_projects = [
+            project for project in projects if not self.is_project_exist(project)]
 
         assert len(
-            nonexistant_views) == 0, f"Views do not exist: {nonexistant_views}"
+            nonexistant_projects) == 0, f"projects do not exist: {nonexistant_projects}"
 
-        for view in views:
-            self.add_dashboards_to_view(view, [dashboard])
+        for project in projects:
+            self.add_analysis_to_project(project, [analysis])
 
-    def remove_view(self, view):
-        """Removes view"""
-        view_name = f'{view}_dashboardReader'
+    def remove_project(self, project):
+        """Removes project"""
+        project_name = f'{project}_dashboardReader'
 
-        self.es.security.delete_role(view_name)
-        click.echo(f'Removed view {view}')
+        self.es.security.delete_role(project_name)
+        click.echo(f'Removed project {project}')
 
-    def remove_dashboard_from_views(self, dashboard_id, views=None):
-        """Remove dashboard_id from views if specified, all views if not"""
-        if views is None:
-            click.echo("Fetching all views")
+    def remove_analysis_from_projects(self, analysis_id, projects=None):
+        """Remove analysis from projects if specified, all projects if not"""
+        if projects is None:
+            click.echo("Fetching all projects")
             response = self.es.security.get_role()
-            views = [response_key for response_key in response.keys(
+            projects = [response_key for response_key in response.keys(
             ) if response_key.endswith("_dashboardReader")]
 
         else:
-            views = [f"{view}_dashboardReader" for view in views]
+            projects = [f"{project}_dashboardReader" for project in projects]
 
         click.echo(
-            f"Checking removal of {dashboard_id} from {len(views)} views")
+            f"Checking removal of {analysis_id} from {len(projects)} projects")
 
-        for view in views:
-            response = self.es.security.get_role(name=view)
-            view_data = response[view]
+        for project in projects:
+            response = self.es.security.get_role(name=project)
+            project_data = response[project]
 
-            view_indices = list(view_data["indices"][0]["names"])
+            project_indices = list(project_data["indices"][0]["names"])
 
-            if dashboard_id in view_indices:
-                click.echo(f"Removing from {view}")
+            if analysis_id in project_indices:
+                click.echo(f"Removing from {project}")
 
-                view_indices.remove(dashboard_id)
+                project_indices.remove(analysis_id)
 
-                self.es.security.put_role(name=view, body={
+                self.es.security.put_role(name=project, body={
                     'indices': [{
-                        'names': view_indices,
+                        'names': project_indices,
                         'privileges': ["read"]
                     }]
                 })
 
 
-def get_query_by_dashboard_id(dashboard_id):
-    """Return query that filters by dashboard_id"""
+def get_query_by_analysis_id(analysis_id):
+    """Return query that filters by analysis_id"""
     return {
         "query": {
             "bool": {
                 "filter": {
                     "term": {
-                        "dashboard_id": dashboard_id
+                        "dashboard_id": analysis_id
                     }
                 }
             }

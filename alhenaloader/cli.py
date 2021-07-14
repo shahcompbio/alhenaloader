@@ -45,7 +45,7 @@ pass_info = click.make_pass_decorator(Info, ensure=True)
 @click.group(chain=True)
 @click.option('--host', default='localhost', help='Hostname for Elasticsearch server')
 @click.option('--port', default=9200, help='Port for Elasticsearch server')
-@click.option('--id', help="ID of dashboard")
+@click.option('--id', help="ID of analysis")
 @pass_info
 def cli(info: Info, host: str, port: int, id: str):
     """Run alhenaloader."""
@@ -57,17 +57,17 @@ def cli(info: Info, host: str, port: int, id: str):
 @cli.command()
 @pass_info
 def clean(info: Info):
-    """Delete indices/records associated with dashboard ID"""
+    """Delete indices/records associated with analysis ID"""
     if info.id is None:
-        click.secho("Please specify a dashboard ID", fg="yellow")
+        click.secho("Please specify a analysis ID", fg="yellow")
         return
 
     alhenaloader.load.clean_data(info.id, info.es)
 
     info.es.delete_record_by_id(
-        info.es.DASHBOARD_ENTRY_INDEX, info.id)
+        info.es.ANALYSIS_ENTRY_INDEX, info.id)
 
-    info.es.remove_dashboard_from_views(info.id)
+    info.es.remove_analysis_from_projects(info.id)
 
 
 @cli.command()
@@ -75,16 +75,16 @@ def clean(info: Info):
 @click.option('--alignment', help='Directory with alignment results')
 @click.option('--hmmcopy', help='Directory with hmmcopy results')
 @click.option('--annotation', help='Directory with annotation results')
-@click.option('--view', '-v', 'views', multiple=True, default=["DLP"], help="Views to load dashboard into")
-@click.option('--library', required=True, help='Library ID of dashboard')
-@click.option('--sample', required=True, help='Sample ID of dashboard')
-@click.option('--description', required=True, help='Description of dashboard')
+@click.option('--project', '-p', 'projects', multiple=True, default=["DLP"], help="Projects to load analysis into")
+@click.option('--library', required=True, help='Library ID of analysis')
+@click.option('--sample', required=True, help='Sample ID of analysis')
+@click.option('--description', required=True, help='Description of analysis')
 @click.option('--metadata', 'metadata', multiple=True, help='Additional metadata')
 @pass_info
-def load(info: Info, qc: str, alignment: str, hmmcopy: str, annotation: str, views: List[str], library: str, sample: str, description: str, metadata: List[str]):
-    """Load records associated with dashboard ID in given directories"""
+def load(info: Info, qc: str, alignment: str, hmmcopy: str, annotation: str, projects: List[str], library: str, sample: str, description: str, metadata: List[str]):
+    """Load records associated with analysis ID in given directories"""
     if info.id is None:
-        click.secho("Please specify a dashboard ID", fg="yellow")
+        click.secho("Please specify a analysis ID", fg="yellow")
         return
 
     is_all_dir = alignment is not None and hmmcopy is not None and annotation is not None
@@ -109,50 +109,50 @@ def load(info: Info, qc: str, alignment: str, hmmcopy: str, annotation: str, vie
     alhenaloader.load.load_dashboard_entry(
         info.id, library, sample, description, processed_metadata, info.es)
 
-    info.es.add_dashboard_to_views(info.id, list(views))
+    info.es.add_analysis_to_projects(info.id, list(projects))
 
 
 @cli.command()
-@click.argument('view')
-@click.option('--dashboard', '-d', 'dashboards', multiple=True, help="List of dashboards names")
+@click.argument('project')
+@click.option('--analysis', '-a', 'analyses', multiple=True, help="List of analysis IDs to add to project")
 @pass_info
-def add_view(info: Info, view: str, dashboards: List[str]):
-    """Add new view with name"""
-    info.es.add_view(view, dashboards=list(dashboards))
+def add_project(info: Info, project: str, analyses: List[str]):
+    """Add new project with name"""
+    info.es.add_project(project, analyses=list(analyses))
 
 
 @cli.command()
-@click.argument('view')
-@click.option('--dashboard', '-d', 'dashboards', multiple=True, help="List of dashboards names")
+@click.argument('project')
+@click.option('--analysis', '-a', 'analyses', multiple=True, help="List of analysis IDs to add to project")
 @pass_info
-def add_dashboard_to_view(info: Info, view: str, dashboards: List[str]):
-    """Add given dashboard IDs to view"""
-    info.es.add_dashboards_to_view(view, list(dashboards))
+def add_analyses_to_project(info: Info, project: str, analyses: List[str]):
+    """Add given analysis IDs to view"""
+    info.es.add_analyses_to_project(project, list(analyses))
 
 
 @cli.command()
-@click.argument('view')
+@click.argument('project')
 @pass_info
-def remove_view(info: Info, view):
-    """Remove view"""
-    info.es.remove_view(view)
+def remove_project(info: Info, project):
+    """Remove project"""
+    info.es.remove_project(project)
 
 
 @cli.command()
 @pass_info
-def list_views(info: Info):
-    """List all views"""
-    views = info.es.get_views()
-    for view in views:
-        click.echo(view)
+def list_project(info: Info):
+    """List all projects"""
+    projects = info.es.get_projects()
+    for project in projects:
+        click.echo(project)
 
 
 @cli.command()
 @pass_info
 def initialize(info: Info):
     """Initalize database"""
-    info.es.create_index(info.es.DASHBOARD_ENTRY_INDEX)
-    info.es.add_view("DLP")
+    info.es.create_index(info.es.ANALYSIS_ENTRY_INDEX)
+    info.es.add_project("DLP")
 
 
 @cli.command()

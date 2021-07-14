@@ -106,7 +106,7 @@ def load(info: Info, qc: str, alignment: str, hmmcopy: str, annotation: str, pro
     for meta_str in metadata:
         [key, value] = meta_str.split(":")
         processed_metadata[key] = value
-    alhenaloader.load.load_dashboard_entry(
+    alhenaloader.load.load_analysis_entry(
         info.id, library, sample, description, processed_metadata, info.es)
 
     info.es.add_analysis_to_projects(info.id, list(projects))

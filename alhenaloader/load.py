@@ -23,7 +23,7 @@ def load_qc_from_dirs(alignment, hmmcopy, annotation):
     return qc_data
 
 
-def load_dashboard_entry(analysis_id, library_id, sample_id, description, metadata, es):
+def load_analysis_entry(analysis_id, library_id, sample_id, description, metadata, es):
     record = {
         **metadata
     }

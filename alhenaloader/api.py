@@ -228,7 +228,7 @@ class ES(object):
             nonexistant_projects) == 0, f"projects do not exist: {nonexistant_projects}"
 
         for project in projects:
-            self.add_analysis_to_project(project, [analysis])
+            self.add_analyses_to_project(project, [analysis])
 
     def remove_project(self, project):
         """Removes project"""

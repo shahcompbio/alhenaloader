@@ -189,7 +189,7 @@ class ES(object):
         self.verify_analyses_loaded(analyses)
 
         self.es.security.put_role(name=project_name, body={'indices': [{
-            'names': [self.DASHBOARD_ENTRY_INDEX] + analyses,
+            'names': [self.ANALYSIS_ENTRY_INDEX] + analyses,
             'privileges': ["read"]
         }]})
 

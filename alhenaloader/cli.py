@@ -20,7 +20,7 @@ It can be used as a handy facility for running the task from a command line.
 """
 from typing import List
 import click
-from scgenome.loaders.qc import load_qc_data
+from scgenome.loaders.qc import load_qc_results
 
 from alhenaloader.api import ES
 import alhenaloader.load
@@ -95,10 +95,9 @@ def load(info: Info, qc: str, alignment: str, hmmcopy: str, annotation: str, pro
         return
 
     if qc is not None:
-        data = load_qc_data(qc)
+        data = load_qc_results(qc, qc, qc)
     else:
-        data = alhenaloader.load.load_qc_from_dirs(
-            alignment, hmmcopy, annotation)
+        data = load_qc_results(alignment, hmmcopy, annotation)
 
     alhenaloader.load.load_data(data, info.id, info.es)
 

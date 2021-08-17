@@ -1,26 +1,9 @@
-from scgenome.loaders.align import load_align_data
-from scgenome.loaders.hmmcopy import load_hmmcopy_data
-from scgenome.loaders.annotation import load_annotation_data
 import pandas as pd
 
 
 def clean_data(analysis_id, es):
     for data_type, get_data in GET_DATA.items():
         es.delete_index(f"{analysis_id.lower()}_{data_type}")
-
-
-def load_qc_from_dirs(alignment, hmmcopy, annotation):
-    """Opens data associated with alignment, hmmcopy, annotation and returns dict of dataframes"""
-
-    qc_data = load_align_data(alignment)
-
-    for table_name, data in load_hmmcopy_data(hmmcopy).items():
-        qc_data[table_name] = data
-
-    for table_name, data in load_annotation_data(annotation).items():
-        qc_data[table_name] = data
-
-    return qc_data
 
 
 def load_analysis_entry(analysis_id, library_id, sample_id, description, metadata, es):

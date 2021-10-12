@@ -33,6 +33,8 @@ DEFAULT_MAPPING = {
     }
 }
 
+FILTERED_LABELS = ['dashboard_type', 'jira_id', 'timestamp']
+
 
 class ES(object):
     """Alhena Elasticsearch connection"""
@@ -65,7 +67,7 @@ class ES(object):
         if not self.es.indices.exists(index):
             self.create_index(index, mapping=mapping)
 
-        click.echo(f'Loading record with id {record_id}')
+        click.echo(f'Loading record to {index} with id {record_id}')
         self.es.index(index=index, id=record_id, body=record)
 
     def load_df(self, df, index_name, batch_size=int(1e5)):
@@ -188,7 +190,7 @@ class ES(object):
 
         diff = list(set(fields) - set(labels))
 
-        return [field for field in diff if field not in ['dashboard_type', 'jira_id']]
+        return [field for field in diff if field not in FILTERED_LABELS]
 
     # Projects
 

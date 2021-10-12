@@ -108,7 +108,12 @@ def load(info: Info, qc: str, alignment: str, hmmcopy: str, annotation: str, pro
     alhenaloader.load.load_analysis_entry(
         info.id, library, sample, description, processed_metadata, info.es)
 
+    missing_labels = info.es.get_missing_labels()
+    for label in missing_labels:
+        info.es.add_label(label)
+
     info.es.add_analysis_to_projects(info.id, list(projects))
+
 
 
 @cli.command()
@@ -148,10 +153,16 @@ def list_project(info: Info):
 
 @cli.command()
 @pass_info
+def update_to_v104(info: Info):
+    info.es.initialize_labels()
+
+@cli.command()
+@pass_info
 def initialize(info: Info):
     """Initalize database"""
     info.es.create_index(info.es.ANALYSIS_ENTRY_INDEX)
     info.es.add_project("DLP")
+    info.es.initialize_labels()
 
 
 @cli.command()

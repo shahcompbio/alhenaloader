@@ -38,6 +38,7 @@ class ES(object):
     """Alhena Elasticsearch connection"""
 
     ANALYSIS_ENTRY_INDEX = "analyses"
+    LABELS_INDEX = "metadata_labels"
 
     def __init__(self, host, port):
         """Create a new instance."""
@@ -146,6 +147,48 @@ class ES(object):
 
         except NotFoundError:
             return False
+
+
+    # Labels
+    ## Each label is ID by their field name (like library_id, dashboard_id, etc)
+
+    def initialize_labels(self):
+        self.create_index(self.LABELS_INDEX)
+        self.add_label("dashboard_id", "Dashboard ID")
+        self.add_label("library_id", "Library ID")
+        self.add_label("sample_id", "Sample ID")
+        self.add_label("description", "Description")
+
+    def get_labels(self):
+        """Returns list of all labels"""
+        response = self.es.search(index=self.LABELS_INDEX, body={"size": 10000})
+
+        return [record['_source'] for record in response['hits']['hits']]
+
+    def add_label(self, id, name=None):
+        """Adds label to index"""
+
+        record = {
+            "id": id,
+            "name": id if name is None else name
+        }
+        
+        self.load_record(record, id, self.LABELS_INDEX)
+
+    def get_missing_labels(self):
+        """Returns list of all metadata fields that do not have labels"""
+
+        labels = [record['id'] for record in self.get_labels()]
+
+        fields_response = self.es.indices.get_mapping(self.ANALYSIS_ENTRY_INDEX)
+        fields = list(fields_response['analyses']['mappings']['properties'].keys())
+
+        labels.sort()
+        fields.sort()
+
+        diff = list(set(fields) - set(labels))
+
+        return [field for field in diff if field not in ['dashboard_type', 'jira_id']]
 
     # Projects
 

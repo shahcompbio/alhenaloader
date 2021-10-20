@@ -33,11 +33,14 @@ DEFAULT_MAPPING = {
     }
 }
 
+FILTERED_LABELS = ['dashboard_type', 'jira_id', 'timestamp']
+
 
 class ES(object):
     """Alhena Elasticsearch connection"""
 
     ANALYSIS_ENTRY_INDEX = "analyses"
+    LABELS_INDEX = "metadata_labels"
 
     def __init__(self, host, port):
         """Create a new instance."""
@@ -64,7 +67,7 @@ class ES(object):
         if not self.es.indices.exists(index):
             self.create_index(index, mapping=mapping)
 
-        click.echo(f'Loading record with id {record_id}')
+        click.echo(f'Loading record to {index} with id {record_id}')
         self.es.index(index=index, id=record_id, body=record)
 
     def load_df(self, df, index_name, batch_size=int(1e5)):
@@ -145,7 +148,49 @@ class ES(object):
             return True
 
         except NotFoundError:
-            return False
+            return Fals
+
+
+    # Labels
+    ## Each label is ID by their field name (like library_id, dashboard_id, etc)
+
+    def initialize_labels(self):
+        self.create_index(self.LABELS_INDEX)
+        self.add_label("dashboard_id", "Dashboard ID")
+        self.add_label("library_id", "Library ID")
+        self.add_label("sample_id", "Sample ID")
+        self.add_label("description", "Description")
+
+    def get_labels(self):
+        """Returns list of all labels"""
+        response = self.es.search(index=self.LABELS_INDEX, body={"size": 10000})
+
+        return [record['_source'] for record in response['hits']['hits']]
+
+    def add_label(self, id, name=None):
+        """Adds label to index"""
+
+        record = {
+            "id": id,
+            "name": id if name is None else name
+        }
+        
+        self.load_record(record, id, self.LABELS_INDEX)
+
+    def get_missing_labels(self):
+        """Returns list of all metadata fields that do not have labels"""
+
+        labels = [record['id'] for record in self.get_labels()]
+
+        fields_response = self.es.indices.get_mapping(self.ANALYSIS_ENTRY_INDEX)
+        fields = list(fields_response['analyses']['mappings']['properties'].keys())
+
+        labels.sort()
+        fields.sort()
+
+        diff = list(set(fields) - set(labels))
+
+        return [field for field in diff if field not in FILTERED_LABELS]
 
     # Projects
 
@@ -269,6 +314,21 @@ class ES(object):
                     }]
                 })
 
+        ## V1.0.4 analyses
+
+    def verify_analyses_v104(self):
+        response = self.es.search(index=self.ANALYSIS_ENTRY_INDEX, body={"size": 10000})
+
+        analyses = [record['_source'] for record in response['hits']['hits']]
+
+        for analysis in analyses:
+            if 'dashboard_id' not in analysis: 
+                new_analysis = {
+                    **analysis,
+                    'dashboard_id': analysis['jira_id']
+                }
+                print('Update ' + new_analysis['dashboard_id'])
+                self.load_record(new_analysis, analysis['jira_id'], self.ANALYSIS_ENTRY_INDEX)
 
 def get_query_by_analysis_id(analysis_id):
     """Return query that filters by analysis_id"""

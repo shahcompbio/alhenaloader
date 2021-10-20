@@ -1,4 +1,5 @@
 import pandas as pd
+import datetime
 
 
 def clean_data(analysis_id, es):
@@ -10,7 +11,8 @@ def load_analysis_entry(analysis_id, library_id, sample_id, description, metadat
     record = {
         **metadata
     }
-
+    
+    record['timestamp'] = datetime.datetime.now().isoformat()
     record["dashboard_id"] = analysis_id
     record["jira_id"] = analysis_id
     record["dashboard_type"] = "single"

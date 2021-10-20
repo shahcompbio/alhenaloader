@@ -148,7 +148,7 @@ class ES(object):
             return True
 
         except NotFoundError:
-            return False
+            return Fals
 
 
     # Labels
@@ -314,6 +314,21 @@ class ES(object):
                     }]
                 })
 
+        ## V1.0.4 analyses
+
+    def verify_analyses_v104(self):
+        response = self.es.search(index=self.ANALYSIS_ENTRY_INDEX, body={"size": 10000})
+
+        analyses = [record['_source'] for record in response['hits']['hits']]
+
+        for analysis in analyses:
+            if 'dashboard_id' not in analysis: 
+                new_analysis = {
+                    **analysis,
+                    'dashboard_id': analysis['jira_id']
+                }
+                print('Update ' + new_analysis['dashboard_id'])
+                self.load_record(new_analysis, analysis['jira_id'], self.ANALYSIS_ENTRY_INDEX)
 
 def get_query_by_analysis_id(analysis_id):
     """Return query that filters by analysis_id"""

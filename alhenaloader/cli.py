@@ -155,6 +155,7 @@ def list_project(info: Info):
 @pass_info
 def update_to_v104(info: Info):
     info.es.initialize_labels()
+    info.es.verify_analyses_v104()
 
 @cli.command()
 @pass_info

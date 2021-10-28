@@ -99,22 +99,15 @@ def load(info: Info, qc: str, alignment: str, hmmcopy: str, annotation: str, pro
     else:
         data = load_qc_results(alignment, hmmcopy, annotation)
 
-    alhenaloader.load.load_data(data, info.id, info.es)
-
     processed_metadata = {}
     for meta_str in metadata:
         [key, value] = meta_str.split(":")
         processed_metadata[key] = value
-    alhenaloader.load.load_analysis_entry(
-        info.id, library, sample, description, processed_metadata, info.es)
+    analysis_record = alhenaloader.load.process_analysis_entry(
+        info.id, library, sample, description, processed_metadata)
 
-    missing_labels = info.es.get_missing_labels()
-    for label in missing_labels:
-        info.es.add_label(label)
-
-    info.es.add_analysis_to_projects(info.id, list(projects))
-
-
+    alhenaloader.load.load_analysis(info.id, data, analysis_record, list(projects), info.es)
+    
 
 @cli.command()
 @click.argument('project')

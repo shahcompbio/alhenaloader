@@ -2,16 +2,27 @@ import pandas as pd
 import datetime
 
 
+def load_analysis(analysis_id, data, metadata_record, projects, es):
+    load_data(data, analysis_id, es)
+
+    es.load_record(record, metadata_record, es.ANALYSIS_ENTRY_INDEX)
+
+    missing_labels = es.get_missing_labels()
+    for label in missing_labels:
+        es.add_label(label)
+
+    es.add_analysis_to_projects(analysis_id, projects)
+
+
 def clean_data(analysis_id, es):
     for data_type, get_data in GET_DATA.items():
         es.delete_index(f"{analysis_id.lower()}_{data_type}")
 
-
-def load_analysis_entry(analysis_id, library_id, sample_id, description, metadata, es):
-    record = {
-        **metadata
+def process_analysis_entry(analysis_id, library_id, sample_id, description, metadata):
+    record = { 
+        **metadata_record
     }
-    
+
     record['timestamp'] = datetime.datetime.now().isoformat()
     record["dashboard_id"] = analysis_id
     record["jira_id"] = analysis_id
@@ -19,6 +30,11 @@ def load_analysis_entry(analysis_id, library_id, sample_id, description, metadat
     record["library_id"] = library_id
     record["sample_id"] = sample_id
     record["description"] = description
+
+    return record
+
+def load_analysis_entry(analysis_id, library_id, sample_id, description, metadata, es):
+    record = process_analysis_entry(analysis_id, library_id, sample_id, description, metadata)
 
     es.load_record(record, analysis_id, es.ANALYSIS_ENTRY_INDEX)
 

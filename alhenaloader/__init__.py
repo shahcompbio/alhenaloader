@@ -10,6 +10,8 @@ Loading scripts for Alhena's DB
 
 from alhenaloader.version import __version__, __release__  # noqa
 from alhenaloader.load import clean_data
+from alhenaloader.load import process_analysis_entry
 from alhenaloader.load import load_analysis_entry
 from alhenaloader.load import load_data
+from alhenaloader.load import load_analysis
 from alhenaloader.api import ES

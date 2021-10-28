@@ -20,7 +20,7 @@ def clean_data(analysis_id, es):
 
 def process_analysis_entry(analysis_id, library_id, sample_id, description, metadata):
     record = { 
-        **metadata_record
+        **metadata
     }
 
     record['timestamp'] = datetime.datetime.now().isoformat()

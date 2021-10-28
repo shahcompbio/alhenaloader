@@ -5,7 +5,7 @@ import datetime
 def load_analysis(analysis_id, data, metadata_record, projects, es):
     load_data(data, analysis_id, es)
 
-    es.load_record(record, metadata_record, es.ANALYSIS_ENTRY_INDEX)
+    es.load_record(metadata_record, analysis_id, es.ANALYSIS_ENTRY_INDEX)
 
     missing_labels = es.get_missing_labels()
     for label in missing_labels:

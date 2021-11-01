@@ -5,6 +5,8 @@ import datetime
 def load_analysis(analysis_id, data, metadata_record, projects, es):
     load_data(data, analysis_id, es)
 
+    metadata_record['cell_count'] = data['annotation_metrics'].shape[0]
+
     es.load_record(metadata_record, analysis_id, es.ANALYSIS_ENTRY_INDEX)
 
     missing_labels = es.get_missing_labels()

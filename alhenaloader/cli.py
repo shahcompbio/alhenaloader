@@ -146,9 +146,28 @@ def list_project(info: Info):
 
 @cli.command()
 @pass_info
+def update_to_v105(info: Info):
+    if not info.es.es.indices.exists(info.es.LABELS_INDEX):
+        print('Bleh')
+        # info.es.initialize_labels()
+        # info.es.verify_analyses_v104()
+    print('Test')
+    
+    info.es.add_cell_count()
+
+
+@cli.command()
+@pass_info
 def update_to_v104(info: Info):
     info.es.initialize_labels()
     info.es.verify_analyses_v104()
+
+@cli.command()
+@pass_info
+def find_dangling_analyses(info: Info):
+    ## find analyses with metadata but no data
+    info.es.verify_data()
+    ## find analyses with data but no metadata
 
 @cli.command()
 @pass_info

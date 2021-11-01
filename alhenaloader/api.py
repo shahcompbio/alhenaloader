@@ -314,6 +314,22 @@ class ES(object):
                     }]
                 })
 
+
+    ## Veritifcation
+    def verify_data(self):
+        ## Check for missing data
+        print("Checking for analyses with missing data")
+        response = self.es.search(index=self.ANALYSIS_ENTRY_INDEX, body={"size": 10000})
+
+        analyses = [record['_source'] for record in response['hits']['hits']]
+        
+        for analysis in analyses:
+            dashboard_id = analysis['dashboard_id']
+
+            if not self.es.indices.exists(f"{dashboard_id.lower()}_qc"):
+                print(dashboard_id)
+
+
         ## V1.0.4 analyses
 
     def verify_analyses_v104(self):
@@ -329,6 +345,24 @@ class ES(object):
                 }
                 print('Update ' + new_analysis['dashboard_id'])
                 self.load_record(new_analysis, analysis['jira_id'], self.ANALYSIS_ENTRY_INDEX)
+
+    ## V1.0.5 Cell Count
+    def add_cell_count(self):
+        response = self.es.search(index=self.ANALYSIS_ENTRY_INDEX, body={"size": 10000})
+
+        analyses = [record['_source'] for record in response['hits']['hits']]
+
+        for analysis in analyses:
+            cell_count_resp = self.es.count(index=f"{analysis['dashboard_id'].lower()}_qc")
+            new_analysis = {
+                **analysis,
+                'cell_count': cell_count_resp['count']
+            }
+            print(new_analysis)
+            # print('Update ' + new_analysis['dashboard_id'])
+            # self.load_record(new_analysis, analysis['dashboard_id'], self.ANALYSIS_ENTRY_INDEX)
+
+    
 
 def get_query_by_analysis_id(analysis_id):
     """Return query that filters by analysis_id"""

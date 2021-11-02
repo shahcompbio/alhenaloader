@@ -163,11 +163,13 @@ def update_to_v104(info: Info):
     info.es.verify_analyses_v104()
 
 @cli.command()
+@click.option('--delete', is_flag=True)
 @pass_info
-def find_dangling_analyses(info: Info):
+def find_dangling_analyses(info: Info, delete: bool):
     ## find analyses with metadata but no data
-    info.es.verify_data()
-    ## find analyses with data but no metadata
+    info.es.verify_data(delete)
+
+    
 
 @cli.command()
 @pass_info

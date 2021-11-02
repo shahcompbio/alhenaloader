@@ -316,7 +316,7 @@ class ES(object):
 
 
     ## Veritifcation
-    def verify_data(self):
+    def verify_data(self, delete):
         ## Check for missing data
         print("Checking for analyses with missing data")
         response = self.es.search(index=self.ANALYSIS_ENTRY_INDEX, body={"size": 10000})
@@ -328,6 +328,8 @@ class ES(object):
 
             if not self.es.indices.exists(f"{dashboard_id.lower()}_qc"):
                 print(dashboard_id)
+                if delete:
+                    self.delete_record_by_id(self.ANALYSIS_ENTRY_INDEX, dashboard_id)
 
 
         ## V1.0.4 analyses
@@ -358,9 +360,9 @@ class ES(object):
                 **analysis,
                 'cell_count': cell_count_resp['count']
             }
-            print(new_analysis)
-            # print('Update ' + new_analysis['dashboard_id'])
-            # self.load_record(new_analysis, analysis['dashboard_id'], self.ANALYSIS_ENTRY_INDEX)
+            # print(new_analysis)
+            print('Update ' + new_analysis['dashboard_id'])
+            self.load_record(new_analysis, analysis['dashboard_id'], self.ANALYSIS_ENTRY_INDEX)
 
     
 

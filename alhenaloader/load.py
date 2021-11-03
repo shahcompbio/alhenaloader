@@ -16,6 +16,13 @@ def load_analysis(analysis_id, data, metadata_record, projects, es):
     es.add_analysis_to_projects(analysis_id, projects)
 
 
+def clean_analysis(analysis_id, es):
+    clean_data(analysis_id, es)
+
+    es.delete_record_by_id(es.ANALYSIS_ENTRY_INDEX, analysis_id)
+
+    es.remove_analysis_from_projects(analysis_id)
+
 def clean_data(analysis_id, es):
     for data_type, get_data in GET_DATA.items():
         es.delete_index(f"{analysis_id.lower()}_{data_type}")

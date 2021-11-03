@@ -62,12 +62,7 @@ def clean(info: Info):
         click.secho("Please specify a analysis ID", fg="yellow")
         return
 
-    alhenaloader.load.clean_data(info.id, info.es)
-
-    info.es.delete_record_by_id(
-        info.es.ANALYSIS_ENTRY_INDEX, info.id)
-
-    info.es.remove_analysis_from_projects(info.id)
+    alhenaloader.load.clean_analysis(info.id, info.es)
 
 
 @cli.command()

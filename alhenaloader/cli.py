@@ -142,6 +142,15 @@ def list_project(info: Info):
 @cli.command()
 @pass_info
 def update_to_v105(info: Info):
+
+    ## need to check whether v1.0.4 is applied
+    ## one, needs labels index
+
+    ## two, need to ensure all analyses have dashboard_id
+
+
+    ## For v1.0.5, need to add cell_count
+    ## so first, need to check that each analysis we have metadata for has data as well
     if not info.es.es.indices.exists(info.es.LABELS_INDEX):
         print('Bleh')
         # info.es.initialize_labels()
@@ -150,12 +159,6 @@ def update_to_v105(info: Info):
     
     info.es.add_cell_count()
 
-
-@cli.command()
-@pass_info
-def update_to_v104(info: Info):
-    info.es.initialize_labels()
-    info.es.verify_analyses_v104()
 
 @cli.command()
 @click.option('--delete', is_flag=True)

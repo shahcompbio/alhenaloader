@@ -151,6 +151,14 @@ class ES(object):
             return Fals
 
 
+    ## Analyses
+    def get_analyses(self):
+        """Returns list of all analyses"""
+        response = self.es.search(index=self.ANALYSIS_ENTRY_INDEX, body={"size": 10000})
+
+        return [record['_source'] for record in response['hits']['hits']]
+
+
     # Labels
     ## Each label is ID by their field name (like library_id, dashboard_id, etc)
 

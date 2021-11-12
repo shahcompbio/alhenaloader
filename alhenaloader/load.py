@@ -5,7 +5,7 @@ import datetime
 def load_analysis(analysis_id, data, metadata_record, projects, es):
     load_data(data, analysis_id, es)
 
-    metadata_record['cell_count'] = data['annotation_metrics'].shape[0]
+    metadata_record['cell_count'] = data['hmmcopy_metrics'].shape[0]
 
     es.load_record(metadata_record, analysis_id, es.ANALYSIS_ENTRY_INDEX)
 
@@ -57,7 +57,7 @@ def load_data(data, analysis_id, es):
 
 
 def get_qc_data(hmmcopy_data):
-    data = hmmcopy_data['annotation_metrics']
+    data = hmmcopy_data['hmmcopy_metrics']
     data['percent_unmapped_reads'] = data["unmapped_reads"] / data["total_reads"]
     data['is_contaminated'] = data['is_contaminated'].apply(
         lambda a: {True: 'true', False: 'false'}[a])

@@ -61,7 +61,7 @@ def get_qc_data(hmmcopy_data):
     data['percent_unmapped_reads'] = data["unmapped_reads"] / data["total_reads"]
     data['is_contaminated'] = data['is_contaminated'].apply(
         lambda a: {True: 'true', False: 'false'}[a])
-    data['hmmcopy_metrics'].rename(columns={'clustering_order': 'order', 'condition': 'experimental_condition'}, inplace=True)
+    data.rename(columns={'clustering_order': 'order', 'condition': 'experimental_condition'}, inplace=True)
     return data
 
 

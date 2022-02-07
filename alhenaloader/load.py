@@ -3,7 +3,7 @@ import datetime
 
 
 def load_analysis(analysis_id, data, metadata_record, projects, es, framework):
-    load_data(data, analysis_id, es)
+    load_data(data, analysis_id, es, framework)
 
     if framework == 'scp':
         metadata_record['cell_count'] = data['annotation_metrics'].shape[0]
@@ -53,11 +53,11 @@ def load_analysis_entry(analysis_id, library_id, sample_id, description, metadat
     es.load_record(record, analysis_id, es.ANALYSIS_ENTRY_INDEX)
 
 
-def load_data(data, analysis_id, es):
+def load_data(data, analysis_id, es, framework):
     """Load dataframes"""
 
     for data_type, get_data in GET_DATA.items():
-        df = get_data(data)
+        df = get_data(data, framework)
         es.load_df(df, f"{analysis_id.lower()}_{data_type}")
 
 

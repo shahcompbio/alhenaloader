@@ -2,10 +2,15 @@ import pandas as pd
 import datetime
 
 
-def load_analysis(analysis_id, data, metadata_record, projects, es):
+def load_analysis(analysis_id, data, metadata_record, projects, es, framework):
     load_data(data, analysis_id, es)
 
-    metadata_record['cell_count'] = data['hmmcopy_metrics'].shape[0]
+    if framework == 'scp':
+        metadata_record['cell_count'] = data['annotation_metrics'].shape[0]
+    elif framework == 'mondrian':
+        metadata_record['cell_count'] = data['hmmcopy_metrics'].shape[0]
+    else:
+        raise Exception(f"Unknown framework, expected 'scp' or 'mondrian', but got '{framework}'")
 
     es.load_record(metadata_record, analysis_id, es.ANALYSIS_ENTRY_INDEX)
 
@@ -56,12 +61,18 @@ def load_data(data, analysis_id, es):
         es.load_df(df, f"{analysis_id.lower()}_{data_type}")
 
 
-def get_qc_data(hmmcopy_data):
-    data = hmmcopy_data['hmmcopy_metrics']
+def get_qc_data(hmmcopy_data, framework):
+    if framework == 'scp':
+        data = hmmcopy_data['annotation_metrics']
+    elif framework == 'mondrian':
+        data = hmmcopy_data['hmmcopy_metrics']
+        data.rename(columns={'clustering_order': 'order', 'condition': 'experimental_condition'}, inplace=True)
+    else:
+        raise Exception(f"Unknown framework, expected 'scp' or 'mondrian', but got '{framework}'")
+
     data['percent_unmapped_reads'] = data["unmapped_reads"] / data["total_reads"]
     data['is_contaminated'] = data['is_contaminated'].apply(
         lambda a: {True: 'true', False: 'false'}[a])
-    data.rename(columns={'clustering_order': 'order', 'condition': 'experimental_condition'}, inplace=True)
     return data
 
 

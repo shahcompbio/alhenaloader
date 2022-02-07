@@ -57,7 +57,11 @@ def load_data(data, analysis_id, es, framework):
     """Load dataframes"""
 
     for data_type, get_data in GET_DATA.items():
-        df = get_data(data, framework)
+        if data_type == 'qc':
+            df = get_data(data, framework)
+        else:
+            df = get_data(data)
+
         es.load_df(df, f"{analysis_id.lower()}_{data_type}")
 
 

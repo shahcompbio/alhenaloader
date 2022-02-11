@@ -2,10 +2,15 @@ import pandas as pd
 import datetime
 
 
-def load_analysis(analysis_id, data, metadata_record, projects, es):
-    load_data(data, analysis_id, es)
+def load_analysis(analysis_id, data, metadata_record, projects, es, framework):
+    load_data(data, analysis_id, es, framework)
 
-    metadata_record['cell_count'] = data['annotation_metrics'].shape[0]
+    if framework == 'scp':
+        metadata_record['cell_count'] = data['annotation_metrics'].shape[0]
+    elif framework == 'mondrian':
+        metadata_record['cell_count'] = data['hmmcopy_metrics'].shape[0]
+    else:
+        raise Exception(f"Unknown framework, expected 'scp' or 'mondrian', but got '{framework}'")
 
     es.load_record(metadata_record, analysis_id, es.ANALYSIS_ENTRY_INDEX)
 
@@ -48,35 +53,42 @@ def load_analysis_entry(analysis_id, library_id, sample_id, description, metadat
     es.load_record(record, analysis_id, es.ANALYSIS_ENTRY_INDEX)
 
 
-def load_data(data, analysis_id, es):
+def load_data(data, analysis_id, es, framework):
     """Load dataframes"""
 
     for data_type, get_data in GET_DATA.items():
-        df = get_data(data)
+        df = get_data(data, framework)
         es.load_df(df, f"{analysis_id.lower()}_{data_type}")
 
 
-def get_qc_data(hmmcopy_data):
-    data = hmmcopy_data['annotation_metrics']
+def get_qc_data(hmmcopy_data, framework=None):
+    if framework == 'scp':
+        data = hmmcopy_data['annotation_metrics']
+    elif framework == 'mondrian':
+        data = hmmcopy_data['hmmcopy_metrics']
+        data.rename(columns={'clustering_order': 'order', 'condition': 'experimental_condition'}, inplace=True)
+    else:
+        raise Exception(f"Unknown framework, expected 'scp' or 'mondrian', but got '{framework}'")
+
     data['percent_unmapped_reads'] = data["unmapped_reads"] / data["total_reads"]
     data['is_contaminated'] = data['is_contaminated'].apply(
         lambda a: {True: 'true', False: 'false'}[a])
     return data
 
 
-def get_segs_data(hmmcopy_data):
+def get_segs_data(hmmcopy_data, framework=None):
     data = hmmcopy_data['hmmcopy_segs'].copy()
     data['chrom_number'] = create_chrom_number(data['chr'])
     return data
 
 
-def get_bins_data(hmmcopy_data):
+def get_bins_data(hmmcopy_data, framework=None):
     data = hmmcopy_data['hmmcopy_reads'].copy()
     data['chrom_number'] = create_chrom_number(data['chr'])
     return data
 
 
-def get_gc_bias_data(hmmcopy_data):
+def get_gc_bias_data(hmmcopy_data, framework=None):
     data = hmmcopy_data['gc_metrics']
 
     gc_cols = list(range(101))

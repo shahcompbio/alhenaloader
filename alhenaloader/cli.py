@@ -62,12 +62,7 @@ def clean(info: Info):
         click.secho("Please specify a analysis ID", fg="yellow")
         return
 
-    alhenaloader.load.clean_data(info.id, info.es)
-
-    info.es.delete_record_by_id(
-        info.es.ANALYSIS_ENTRY_INDEX, info.id)
-
-    info.es.remove_analysis_from_projects(info.id)
+    alhenaloader.load.clean_analysis(info.id, info.es)
 
 
 @cli.command()
@@ -146,9 +141,33 @@ def list_project(info: Info):
 
 @cli.command()
 @pass_info
-def update_to_v104(info: Info):
-    info.es.initialize_labels()
-    info.es.verify_analyses_v104()
+def update_to_v105(info: Info):
+
+    ## need to check whether v1.0.4 is applied
+    ## one, needs labels index
+
+    ## two, need to ensure all analyses have dashboard_id
+
+
+    ## For v1.0.5, need to add cell_count
+    ## so first, need to check that each analysis we have metadata for has data as well
+    if not info.es.es.indices.exists(info.es.LABELS_INDEX):
+        print('Bleh')
+        # info.es.initialize_labels()
+        # info.es.verify_analyses_v104()
+    print('Test')
+    
+    info.es.add_cell_count()
+
+
+@cli.command()
+@click.option('--delete', is_flag=True)
+@pass_info
+def find_dangling_analyses(info: Info, delete: bool):
+    ## find analyses with metadata but no data
+    info.es.verify_data(delete)
+
+    
 
 @cli.command()
 @pass_info

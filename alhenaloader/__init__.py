@@ -14,4 +14,5 @@ from alhenaloader.load import process_analysis_entry
 from alhenaloader.load import load_analysis_entry
 from alhenaloader.load import load_data
 from alhenaloader.load import load_analysis
+from alhenaloader.load import clean_analysis
 from alhenaloader.api import ES

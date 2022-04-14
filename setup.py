@@ -53,8 +53,19 @@ setup(
         'elasticsearch>=7.0.0,<8.0.0',
         'numpy',
         'pandas',
-        "scgenome @ git+https://github.com/shahcompbio/scgenome.git@master#egg=scgenome",
-        "pyyaml"
+        'scgenome @ git+https://github.com/shahcompbio/scgenome.git@master#egg=scgenome',
+        'pyyaml',
+        'sklearn',    
+        'umap',
+        'anndata',
+        'hdbscan',
+        'seaborn',
+        'adjustText',
+        'pyranges',
+        'pyfaidx',
+        'numba',
+        'pyBigWig',
+        'csverve==0.2.2',
     ],
     entry_points="""
     [console_scripts]

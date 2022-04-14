@@ -2,6 +2,11 @@
 
 Loading scripts for Alhena's DB
 
+## Install
+```bash
+make install
+make build
+```
 ## Project Features
 
 * [alhenaloader](http://alhenaloader.readthedocs.io/)

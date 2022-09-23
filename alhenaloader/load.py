@@ -114,5 +114,6 @@ chr_prefixed = {str(a): '0' + str(a) for a in range(1, 10)}
 
 
 def create_chrom_number(chromosomes):
+    chromosomes = chromosomes.apply(lambda x: x.replace('chr', ''))
     chrom_number = chromosomes.map(lambda a: chr_prefixed.get(a, a))
     return chrom_number

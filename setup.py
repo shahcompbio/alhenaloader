@@ -65,7 +65,7 @@ setup(
         'pyfaidx',
         'numba',
         'pyBigWig',
-        'csverve==0.2.2',
+        'csverve==0.3.1',
     ],
     entry_points="""
     [console_scripts]

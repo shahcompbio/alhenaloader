@@ -60,7 +60,7 @@ setup(
         #'anndata',
         'hdbscan',
         'seaborn',
-        'adjustText',
+        #'adjustText',
         'pyranges',
         'pyfaidx',
         'numba',

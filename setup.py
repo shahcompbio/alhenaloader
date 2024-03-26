@@ -55,7 +55,7 @@ setup(
         'pandas',
         'scgenome @ git+https://github.com/shahcompbio/scgenome.git@master#egg=scgenome',
         'pyyaml',
-        'sklearn',    
+        'scikit-learn',
         'umap',
         'anndata',
         'hdbscan',

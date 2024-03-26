@@ -57,7 +57,7 @@ setup(
         'pyyaml',
         'scikit-learn',
         'umap',
-        'anndata',
+        # 'anndata',
         'hdbscan',
         'seaborn',
         'adjustText',

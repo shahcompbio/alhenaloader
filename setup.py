@@ -53,7 +53,7 @@ setup(
         'elasticsearch>=7.0.0,<8.0.0',
         'numpy',
         'pandas',
-        'scgenome @ git+https://github.com/shahcompbio/scgenome.git@master#egg=scgenome',
+        #'scgenome @ git+https://github.com/shahcompbio/scgenome.git@master#egg=scgenome',
         'pyyaml',
         'scikit-learn',
         'umap',
@@ -65,6 +65,7 @@ setup(
         'pyfaidx',
         'numba',
         'pyBigWig',
+        'scgenome=0.0.17',
         #'csverve==0.3.1',
     ],
     entry_points="""

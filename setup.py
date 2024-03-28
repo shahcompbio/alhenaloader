@@ -53,7 +53,7 @@ setup(
         'elasticsearch>=7.0.0,<8.0.0',
         'numpy',
         'pandas==1.4',
-        'scgenome @ git+https://github.com/shahcompbio/scgenome.git@alhenaloader#egg=scgenome',
+        'scgenome @ git+https://github.com/mondrian-scwgs/scgenome.git@alhenaloader#egg=scgenome',
         'pyyaml',
         'scikit-learn',
         'umap',

@@ -65,7 +65,7 @@ setup(
         'pyfaidx',
         'numba',
         'pyBigWig',
-        'scgenome==0.0.17',
+        'scgenome==0.0.16',
         #'csverve==0.3.1',
     ],
     entry_points="""

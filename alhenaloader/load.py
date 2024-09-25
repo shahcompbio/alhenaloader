@@ -7,7 +7,7 @@ def load_analysis(analysis_id, data, metadata_record, projects, es, framework):
 
     if framework == 'scp':
         metadata_record['cell_count'] = data['annotation_metrics'].shape[0]
-    elif framework == 'mondrian':
+    elif framework.startswith('mondrian'):
         metadata_record['cell_count'] = data['hmmcopy_metrics'].shape[0]
     else:
         raise Exception(f"Unknown framework, expected 'scp' or 'mondrian', but got '{framework}'")
@@ -64,7 +64,7 @@ def load_data(data, analysis_id, es, framework):
 def get_qc_data(hmmcopy_data, framework=None):
     if framework == 'scp':
         data = hmmcopy_data['annotation_metrics']
-    elif framework == 'mondrian':
+    elif framework.startswith('mondrian'):
         data = hmmcopy_data['hmmcopy_metrics']
         data.rename(columns={'clustering_order': 'order', 'condition': 'experimental_condition'}, inplace=True)
     else:
